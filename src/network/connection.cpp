@@ -147,7 +147,6 @@ namespace hc {
   connection::apply_in_transformations ()
   {
     struct evbuffer *input = bufferevent_get_input (this->bev);
-    int len = (int)evbuffer_get_length (input);
     
     bool needed = false;
     auto trs = this->proto->get_transformers ();
@@ -230,9 +229,6 @@ namespace hc {
         ++ on_count;
     if (on_count == 0)
       return;
-    
-    if (on_count == 2)
-      int a = 5;
     
     int ti = 0;
     unsigned char *init_data = const_cast<unsigned char *> (pack->get_data ());

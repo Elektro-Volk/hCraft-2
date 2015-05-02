@@ -12,7 +12,7 @@ Features
 
 This is a new project so there's not a lot implemented yet!
 *  Players can connect and walk around.
-*  More will implemented soon!
+*  A lot more will be implemented soon!
 
 Building
 --------
