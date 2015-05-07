@@ -12,6 +12,7 @@ Features
 
 This is a new project so there's not a lot implemented yet!
 *  Players can connect and walk around.
+*  The Anvil world format is implemented.
 *  A lot more will be implemented soon!
 
 Building
