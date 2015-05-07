@@ -27,10 +27,14 @@ namespace hc {
   static void
   _default_config (server::configuration& cfg)
   {
+    cfg.motd = "A new hCraft server has been born!";
+    cfg.max_players = 12;
+    
     cfg.port = 25565;
     cfg.encryption = true;
     cfg.compress_threshold = 256;
     cfg.compress_level = 6;
+    
     cfg.mainw = "Main";
   }
   
@@ -47,6 +51,11 @@ namespace hc {
       }
     
     fs << "{\n";
+    fs << "\"general\": {\n";
+    fs << "  \"motd\": \"A new hCraft server has been born!\",\n";
+    fs << "  \"max-players\": 12,\n";
+    fs << "  },\n";
+    fs << "\n";
     fs << "  \"net\": {\n";
     fs << "    \"port\": 25565,\n";
     fs << "    \"encryption\": true,\n";
@@ -55,7 +64,7 @@ namespace hc {
     fs << "      \"level\": 6,\n";
     fs << "    }\n";
     fs << "  },\n";
-    fs << "  \n";
+    fs << "\n";
     fs << "  \"worlds\": {\n";
     fs << "    \"main-world\": \"Main\",\n";
     fs << "  }\n";
@@ -66,6 +75,28 @@ namespace hc {
   }
   
   
+  
+   static void
+  _cfg_load_general (json::j_object *obj, server::configuration& cfg, logger& log)
+  {
+    if (!obj)
+      {
+        log (LT_FATAL) << "  config: `general' not found" << std::endl;
+        throw server_start_error ("config: `general' not found");
+      }
+    
+    // general.motd
+    if (obj->get ("motd"))
+      cfg.motd = obj->get ("motd")->as_string ();
+    else
+      log (LT_WARNING) << "  config: `general.motd' not found, using default." << std::endl;
+    
+    // general.max-players
+    if (obj->get ("max-players"))
+      cfg.max_players = (int)obj->get ("max-players")->as_number ();
+    else
+      log (LT_WARNING) << "  config: `general.max-players' not found, using default." << std::endl;
+  }
   
   static void
   _cfg_load_net_compression (json::j_object *obj, server::configuration& cfg, logger& log)
@@ -133,6 +164,7 @@ namespace hc {
   static void
   _cfg_load (json::j_object *root, server::configuration& cfg, logger& log)
   {
+    _cfg_load_general (root->get ("general")->as_object (), cfg, log);
     _cfg_load_net (root->get ("net")->as_object (), cfg, log);
     _cfg_load_worlds (root->get ("worlds")->as_object (), cfg, log);
   }

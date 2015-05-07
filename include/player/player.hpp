@@ -23,6 +23,7 @@
 #include "util/position.hpp"
 #include "util/thread_pool.hpp"
 #include "util/refc.hpp"
+#include "util/common.hpp"
 #include <string>
 #include <random>
 #include <mutex>
@@ -78,6 +79,7 @@ namespace hc {
   
   
 //-----------------------------------------------------------------------------
+  
   
   /* 
    * Represents a player.
@@ -159,6 +161,11 @@ namespace hc {
      * Invoked when the player attempts to send out a chat message.
      */
     void on_chat (const std::string& msg);
+    
+    /* 
+     * Invoked when the player attempts to destroy a block.
+     */
+    void on_digging (int x, int y, int z, digging_state state, block_face face);
     
 //------------------------------------------------------------------------------
     

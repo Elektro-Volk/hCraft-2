@@ -30,7 +30,12 @@ namespace hc {
   class flatgrass_world_generator: public world_generator
   {
   public:
-    virtual void generate (chunk *ch, int cx, int cz) override;
+    virtual const char*
+    name () override
+      { return "flatgrass"; }
+    
+  public:
+    virtual void generate (chunk *ch) override;
     
     virtual entity_pos find_spawn () override;
   };

@@ -97,6 +97,8 @@ namespace hc {
     inline player* get_player () { return this->pl; }
     inline void set_player (player *pl) { this->pl = pl; }
     
+    inline std::recursive_mutex& get_dc_mutex () { return this->dc_mtx; }
+    
   public:
     connection (server& srv, evutil_socket_t sock, const char *ip);
     ~connection ();

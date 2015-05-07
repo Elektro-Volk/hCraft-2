@@ -20,6 +20,7 @@
 #define _hCraft2__WORLD__WORLD_GENERATOR__H_
 
 #include "util/position.hpp"
+#include <string>
 
 
 namespace hc {
@@ -36,12 +37,34 @@ namespace hc {
   {
   public:
     virtual ~world_generator () { }
+   
+  public:
+    /* 
+     * Creates a new world generator from the given name and initializes it
+     * using the specified initialization string.
+     */
+    static world_generator* create (const char *name,
+      const std::string& init_str);
+      
+  public:
+    /* 
+     * Returns the name of the world generator.
+     */
+    virtual const char* name () = 0;
   
   public:
     /* 
-     * Generates a chunk at the specified chunk coordinates.
+     * Initializes the world generator using the specified initialization
+     * string.
      */
-    virtual void generate (chunk *ch, int cx, int cz) = 0;
+    virtual void setup (const std::string& init_str) { }
+    
+    
+    
+    /* 
+     * Generates on the specified chunk.
+     */
+    virtual void generate (chunk *ch) = 0;
     
     /* 
      * Generates an "edge" chunk.
@@ -49,6 +72,7 @@ namespace hc {
      * world.
      */
     virtual void generate_edge (chunk *ch);
+    
     
     /* 
      * Finds an appropriate spawn position.

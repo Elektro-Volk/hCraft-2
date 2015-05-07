@@ -36,6 +36,9 @@ namespace hc {
     virtual ~packet_builder () { }
     
   public:
+    virtual packet* make_login_disconnect (const std::string& msg) = 0;
+    
+    
     virtual packet* make_keep_alive (int id) = 0;
     
     virtual packet* make_disconnect (const std::string& msg) = 0;

@@ -23,8 +23,10 @@
 #include "util/thread.hpp"
 #include "network/protocol.hpp"
 #include "world/world.hpp"
-#include "world/generators/flatgrass.hpp"
+#include "world/world_generator.hpp"
+#include "world/world_provider.hpp"
 #include "player/player.hpp"
+#include "os/fs.hpp"
 #include <chrono>
 #include <cstring>
 #include <algorithm>
@@ -257,8 +259,16 @@ namespace hc {
     std::vector<connection *> nconns;
     for (auto conn : this->gray_conns)
       {
-        if (!conn->get_player () || conn->get_player ()->get_refc ().zero ())
-          delete conn;
+        // it's possible that a connection's destructor will be in the middle
+        // of execution when we try to delete it.
+        std::unique_lock<std::recursive_mutex> dc_guard { conn->get_dc_mutex () };
+        
+        player *pl = conn->get_player ();
+        if (!pl || conn->get_player ()->get_refc ().zero ())
+          {
+            dc_guard.unlock ();
+            delete conn;
+          }
         else
           nconns.push_back (conn);
       }
@@ -270,12 +280,18 @@ namespace hc {
   
   /*
    * Inserts the specified player to the server's player list.
+   * 
+   * Throws `server_full_error' when the player cannot be registered because
+   * the server is full.
    */
   void
   server::register_player (player *pl)
   {
     std::lock_guard<std::recursive_mutex> guard { this->conn_mtx };
     
+    if ((int)this->players.size () == this->cfg.max_players)
+      throw server_full_error ();
+      
     this->players.push_back (pl);
   }
   
@@ -400,12 +416,52 @@ namespace hc {
   void
   server::init_worlds ()
   {
+    fs::create_dir ("worlds");
+    
     this->lman.start (1);
     
-    log (LT_SYSTEM) << "Creating main world `" << this->cfg.mainw
-                    << "'..." << std::endl;
-    this->mainw = new world (*this, new flatgrass_world_generator ());
-    this->worlds.push_back (this->mainw);
+    std::vector<std::string> paths;
+    fs::get_files ("worlds", paths);
+    fs::get_dirs ("worlds", paths);
+    for (auto& path : paths)
+      {
+        std::string full_path = "worlds/" + path;
+        const char *fmt = world_provider_specifier::determine (full_path);
+        if (!fmt)
+          continue;
+        
+        world *w = world::load_from (full_path, *this);
+        if (!w)
+          continue;
+        
+        this->worlds.push_back (w);
+      }
+    
+    // setup main world
+    world *mw = nullptr;
+    for (world *w : this->worlds)
+      if (w->get_name () == this->cfg.mainw)
+        {
+          mw = w;
+          break;
+        }
+    
+    if (mw)
+      {
+        this->mainw = mw;
+        log (LT_SYSTEM) << "World \"" << mw->get_name ()
+          << "\" has been as set as the main world." << std::endl;
+      }
+    else
+      {
+        log (LT_WARNING) << "Main world (\""
+          << this->cfg.mainw << "\") not found, creating default..." << std::endl;
+        
+        this->mainw = new world (this->cfg.mainw, *this,
+          world_generator::create ("flatgrass", ""),
+          world_provider::create ("anvil"));
+        this->worlds.push_back (this->mainw);
+      }
   }
   
   void

@@ -76,12 +76,13 @@ namespace hc {
     
     // play:
     
-    virtual void handle_p00 (packet_reader& reader);
-    virtual void handle_p01 (packet_reader& reader);
-    virtual void handle_p03 (packet_reader& reader);
-    virtual void handle_p04 (packet_reader& reader);
-    virtual void handle_p05 (packet_reader& reader);
-    virtual void handle_p06 (packet_reader& reader);
+    virtual void handle_p00 (packet_reader& reader); // keep alive
+    virtual void handle_p01 (packet_reader& reader); // chat message
+    virtual void handle_p03 (packet_reader& reader); // player
+    virtual void handle_p04 (packet_reader& reader); // player position
+    virtual void handle_p05 (packet_reader& reader); // player look
+    virtual void handle_p06 (packet_reader& reader); // player pos & look
+    virtual void handle_p07 (packet_reader& reader); // player digging
     
   public:
     /* 

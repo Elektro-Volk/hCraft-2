@@ -19,6 +19,9 @@
 #ifndef _hCraft2__WORLD__CHUNK__H_
 #define _hCraft2__WORLD__CHUNK__H_
 
+#include "util/common.hpp"
+#include "util/position.hpp"
+
 
 namespace hc {
   
@@ -43,20 +46,34 @@ namespace hc {
    */
   class chunk
   {
+    chunk_pos pos;
     sub_chunk *subs[16];
     unsigned char biomes[256];
     int hmap[256];
     
+    // neighbours
+    chunk *neighbours[4];
+    
   public:
+    inline chunk_pos get_pos () { return this->pos; }
     inline sub_chunk* get_sub (int sy) { return this->subs[sy]; }
-    inline unsigned char* get_biome_data () { return this->biomes; }
+    inline unsigned char* get_biomes () { return this->biomes; }
+    inline int* get_heightmap () { return this->hmap; }
     
     inline int
     get_height (int x, int z)
       { return this->hmap[(z << 4) | x]; }
     
+    inline chunk*
+    get_neighbour (direction dir)
+      { return this->neighbours[(int)dir]; }
+    
+    inline void
+    set_neighbour (direction dir, chunk *ch)
+      { this->neighbours[(int)dir] = ch; }
+    
   public:
-    chunk ();
+    chunk (int x, int z);
     ~chunk ();
     
   private:
@@ -69,10 +86,10 @@ namespace hc {
     void set_meta (int x, int y, int z, unsigned char meta);
     unsigned char get_meta (int x, int y, int z);
     
-    void set_sky_light (int x, int y, int z, unsigned char meta);
+    void set_sky_light (int x, int y, int z, unsigned char sl);
     unsigned char get_sky_light (int x, int y, int z);
     
-    void set_block_light (int x, int y, int z, unsigned char meta);
+    void set_block_light (int x, int y, int z, unsigned char bl);
     unsigned char get_block_light (int x, int y, int z);
     
     void set_id_and_meta (int x, int y, int z, unsigned short id, unsigned char meta);

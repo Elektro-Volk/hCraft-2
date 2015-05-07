@@ -18,13 +18,13 @@
 
 #include "world/generators/flatgrass.hpp"
 #include "world/chunk.hpp"
-#include "world/blocks.hpp"
+#include "slot/blocks.hpp"
 
 
 namespace hc {
   
   void
-  flatgrass_world_generator::generate (chunk *ch, int cx, int cz)
+  flatgrass_world_generator::generate (chunk *ch)
   {
     for (int y = 0; y < 58; ++y)
       for (int x = 0; x < 16; ++x)

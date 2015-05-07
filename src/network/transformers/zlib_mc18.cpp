@@ -67,9 +67,7 @@ namespace hc {
                 outc *= 2;
               }
             
-            int n;
-            bin::write_varint (out + outl, plen - dlen_len, &n);
-            outl += n;
+            outl += bin::write_varint (out + outl, plen - dlen_len);
             
             std::memcpy (out + outl, ptr + plen_len + dlen_len, plen - dlen_len);
             outl += plen - dlen_len;
@@ -92,9 +90,7 @@ namespace hc {
                   outc *= 2;
                 }
               
-              int n;
-              bin::write_varint (out + outl, dlen, &n);
-              outl += n;
+              outl += bin::write_varint (out + outl, dlen);
             }
             
             for (;;)

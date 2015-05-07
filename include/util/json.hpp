@@ -88,7 +88,7 @@ namespace hc {
       std::string as_string () const;
       j_object* as_object ();
       j_array* as_array ();
-      j_bool* as_bool ();
+      bool as_bool ();
     };
     
     

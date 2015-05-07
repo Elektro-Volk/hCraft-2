@@ -129,6 +129,8 @@ namespace hc {
     // 0x00: Status Request
     // 
     
+    server& srv = this->conn->get_server ();
+    
     std::unique_ptr<json::j_object> js { new json::j_object () };
     {
       using namespace json;
@@ -139,13 +141,13 @@ namespace hc {
       js->set ("version", obj);
       
       obj = new j_object ();
-      obj->set ("max", new j_number (12));
-      obj->set ("online", new j_number (0));
+      obj->set ("max", new j_number (srv.get_config ().max_players));
+      obj->set ("online", new j_number (srv.get_player_count ()));
       obj->set ("sample", new j_array ());
       js->set ("players", obj);
       
       obj = new j_object ();
-      obj->set ("text", new j_string ("Hello world"));
+      obj->set ("text", new j_string (srv.get_config ().motd));
       js->set ("description", obj);
     }
     
@@ -190,8 +192,20 @@ namespace hc {
     // TODO: check whether username is valid
     
     player *pl = new player (*this->conn, uuid_t::random (), name);
+    
+    try
+      {
+        srv.register_player (pl);
+      }
+    catch (const server_full_error&)
+      {
+        delete pl;
+        this->conn->send (
+          builder->make_login_disconnect ("Sorry, server full"), CONN_SEND_DISCONNECT);
+        return;
+      }
+    
     this->conn->set_player (pl);
-    srv.register_player (pl);
     this->pl = pl;
     log (LT_SYSTEM) << "Player `" << pl->get_username () << "' logging in from @"
       << this->conn->get_ip () << " (UUID: " << pl->get_uuid ().str () << ")" << std::endl;
@@ -402,6 +416,34 @@ namespace hc {
     this->pl->on_move (pos);
   }
   
+  void
+  mc18_packet_handler::handle_p07 (packet_reader& reader)
+  {
+    // 
+    // 0x07: Player Digging
+    //
+    
+    unsigned char status_byte = reader.read_byte ();
+    unsigned long long pos = reader.read_long ();
+    unsigned char face_byte = reader.read_byte ();
+    
+    digging_state state = (digging_state)status_byte;
+    block_face face = (block_face)face_byte;
+    
+    int x = pos >> 38;
+    int y = (pos >> 26) & 0xFFF;
+    int z = pos & 0x3FFFFFF;
+    
+    if (x & (1 << 25))
+      x |= (0xFFFFFFFFU << 26);
+    if (y & (1 << 11))
+      x |= (0xFFFFFFFFU << 12);
+    if (z & (1 << 25))
+      z |= (0xFFFFFFFFU << 26);
+    
+    this->pl->on_digging (x, y, z, state, face);
+  }
+  
   
   
 //------------------------------------------------------------------------------
@@ -445,7 +487,7 @@ namespace hc {
       &mc18_packet_handler::handle_p00, &mc18_packet_handler::handle_p01,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_p03,
       &mc18_packet_handler::handle_p04, &mc18_packet_handler::handle_p05,
-      &mc18_packet_handler::handle_p06, &mc18_packet_handler::handle_xx,
+      &mc18_packet_handler::handle_p06, &mc18_packet_handler::handle_p07,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,

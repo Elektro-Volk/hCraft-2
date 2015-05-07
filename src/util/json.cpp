@@ -90,12 +90,12 @@ namespace hc {
       return (static_cast<j_array *> (this));
     }
     
-    j_bool*
+    bool
     j_value::as_bool ()
     {
       if (this->type () != JSON_BOOL)
         return nullptr;
-      return (static_cast<j_bool *> (this));
+      return (static_cast<j_bool *> (this))->get ();
     }
   }
   

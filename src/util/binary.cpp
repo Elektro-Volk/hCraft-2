@@ -109,9 +109,9 @@ namespace hc {
      * varint). Returns false is the contained string is not valid.
      */
     bool
-    read_string (const unsigned char *ptr, char *out, int out_len, int *olen)
+    read_mc_string (const unsigned char *ptr, char *out, int out_len, int *olen)
     {
-      int vl;
+      int vl = 0;
       int len = read_varint (ptr, &vl);
       if (olen)
         *olen = len + vl;
@@ -149,15 +149,13 @@ namespace hc {
     
 //------------------------------------------------------------------------------
     
-    void
-    write_varint (unsigned char *ptr, unsigned int val, int *olen)
+    int
+    write_varint (unsigned char *ptr, unsigned int val)
     {
       if (!val)
         {
           *ptr = 0;
-          if (olen)
-            *olen = 1;
-          return;
+          return 1;
         }
       
       int n = 0;
@@ -172,19 +170,16 @@ namespace hc {
           ptr[n++] = p;
         }
       
-      if (olen)
-        *olen = n;
+      return n;
     }
     
-    void
-    write_varlong (unsigned char *ptr, unsigned long long val, int *olen)
+    int
+    write_varlong (unsigned char *ptr, unsigned long long val)
     {
       if (!val)
         {
           *ptr = 0;
-          if (olen)
-            *olen = 1;
-          return;
+          return 1;
         }
       
       int n = 0;
@@ -199,21 +194,19 @@ namespace hc {
           ptr[n++] = p;
         }
       
-      if (olen)
-        *olen = n;
+      return n;
     }
     
-    void
-    write_string (unsigned char *ptr, const char *str, int *olen)
+    int
+    write_mc_string (unsigned char *ptr, const char *str)
     {
       int n = 0;
-      write_varint (ptr, (unsigned int)std::strlen (str), &n);
+      n += write_varint (ptr, (unsigned int)std::strlen (str));
       
       while (*str)
         ptr[n++] = *str++;
       
-      if (olen)
-        *olen = n;
+      return n;
     }
   }
 }

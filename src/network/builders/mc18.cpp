@@ -33,9 +33,8 @@ namespace hc {
   inline packet*
   _put_len (packet *pack)
   {
-    int vl;
     unsigned char a[5];
-    bin::write_varint (a, pack->get_length (), &vl);
+    int vl = bin::write_varint (a, pack->get_length ());
     pack->use_reserved (vl);
     pack->put_bytes (a, vl);
     return pack;
@@ -107,6 +106,25 @@ namespace hc {
     
     return _put_len (pack);
   }
+  
+  packet*
+  mc18_packet_builder::make_login_disconnect (const std::string& msg)
+  {
+    packet *pack = new packet ();
+    pack->put_varint (0x00); // opcode
+    
+    std::ostringstream ss;
+    json_writer writer (ss);
+    json::j_object *js = new json::j_object ();
+    js->set ("text", new json::j_string (msg));
+    js->set ("color", new json::j_string ("red"));
+    writer.write (js);
+    pack->put_string (ss.str ().c_str ());
+    delete js;
+    
+    return _put_len (pack);
+  }
+  
   
   
   
@@ -232,7 +250,7 @@ namespace hc {
       if (mask & (1 << i))
           pack->put_bytes (ch->get_sub (i)->sl, 2048);
     if (cont)
-      pack->put_bytes (ch->get_biome_data (), 256);
+      pack->put_bytes (ch->get_biomes (), 256);
     
     return _put_len (pack);
   }

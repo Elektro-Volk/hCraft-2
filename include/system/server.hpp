@@ -58,6 +58,17 @@ namespace hc {
       { }
   };
   
+  /* 
+   * Thrown by server::register_player () when the server is full.
+   */
+  class server_full_error: public std::runtime_error
+  {
+  public:
+    server_full_error ()
+      : std::runtime_error ("server full")
+      { }
+  };
+  
   
   /* 
    * The hCraft server.
@@ -89,6 +100,9 @@ namespace hc {
      */
     struct configuration
     {
+      std::string motd;
+      int max_players;
+      
       int port;
       bool encryption;
       int compress_threshold;
@@ -138,6 +152,7 @@ namespace hc {
     inline world* get_main_world () { return this->mainw; }
     inline thread_pool::seq_class* get_gen_seq () { return this->gen_seq; }
     inline lighting_manager& get_lighting_manager () { return this->lman; }
+    inline int get_player_count () const { return (int)this->players.size (); }
     
     inline CryptoPP::RSA::PublicKey get_pub_key ()
       { return CryptoPP::RSA::PublicKey (this->rsa_p); }
@@ -203,6 +218,9 @@ namespace hc {
     
     /*
      * Inserts the specified player to the server's player list.
+     * 
+     * Throws `server_full_error' when the player cannot be registered because
+     * the server is full.
      */
     void register_player (player *pl);
     

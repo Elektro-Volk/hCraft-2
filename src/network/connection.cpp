@@ -164,7 +164,7 @@ namespace hc {
       }
     
     struct evbuffer *lastbuf = input;
-    for (int i = trs.size () - 1; i >= 0; --i)
+    for (int i = (int)trs.size () - 1; i >= 0; --i)
       {
         auto tr = trs[i];
         if (!tr->is_on ())

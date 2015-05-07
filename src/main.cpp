@@ -27,12 +27,9 @@
 #include <cstring>
 
 // TEST:
-#include "util/uuid.hpp"
-#include "util/thread.hpp"
-#include "util/json.hpp"
-#include "util/thread_pool.hpp"
 #include <random>
 #include <sstream>
+#include <fstream>
 
 
 //------------------------------------------------------------------------------
@@ -43,9 +40,6 @@ static int
 _test ()
 {
   using namespace hc;
-  
-  uuid_t id = uuid_t::random ();
-  std::cout << id.str () << std::endl;
   
   return 0;
 }

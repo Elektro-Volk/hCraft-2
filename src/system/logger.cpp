@@ -45,6 +45,7 @@ namespace hc {
     switch (lt)
       {
       case LT_DEBUG:    *this << "debug   | "; break;
+      case LT_CHAT:     *this << "chat    | "; break;
       case LT_SYSTEM:   *this << "system  | "; break;
       case LT_WARNING:  *this << "warning | "; break;
       case LT_ERROR:    *this << "error   | "; break;

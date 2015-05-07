@@ -19,6 +19,8 @@
 #ifndef _hCraft2__UTIL__BINARY__H_
 #define _hCraft2__UTIL__BINARY__H_
 
+#include <cstring>
+
 
 namespace hc {
   
@@ -33,19 +35,27 @@ namespace hc {
       { return *ptr ? true : false; }
     
     inline short
-    read_short (const unsigned char *ptr)
+    read_short_be (const unsigned char *ptr)
       { return (short)(((unsigned short)ptr[0] << 8) |
                         (unsigned short)ptr[1]); }
     
+    inline short
+    read_short_le (const unsigned char *ptr)
+      { return *((const short *)ptr); }
+    
     inline int
-    read_int (const unsigned char *ptr)
+    read_int_be (const unsigned char *ptr)
       { return (int)(((unsigned int)ptr[0] << 24) |
                      ((unsigned int)ptr[1] << 16) |
                      ((unsigned int)ptr[2] << 8)  |
                       (unsigned int)ptr[3]); }
     
+    inline int
+    read_int_le (const unsigned char *ptr)
+      { return *((const int *)ptr); }
+    
     inline long long
-    read_long (const unsigned char *ptr)
+    read_long_be (const unsigned char *ptr)
       { return (long long)(((unsigned long long)ptr[0] << 56) |
                            ((unsigned long long)ptr[1] << 48) |
                            ((unsigned long long)ptr[2] << 40) |
@@ -55,8 +65,12 @@ namespace hc {
                            ((unsigned long long)ptr[6] << 8)  |
                             (unsigned long long)ptr[7]); }
     
+    inline long long
+    read_long_le (const unsigned char *ptr)
+      { return *((const long long *)ptr); }
+    
     inline float
-    read_float (const unsigned char *ptr)
+    read_float_be (const unsigned char *ptr)
     {
       unsigned char arr[4];
       arr[0] = ptr[3];
@@ -66,8 +80,12 @@ namespace hc {
       return *((float *)arr);
     }
     
+    inline float
+    read_float_le (const unsigned char *ptr)
+      { return *((const float *)ptr); }
+    
     inline double
-    read_double (const unsigned char *ptr)
+    read_double_be (const unsigned char *ptr)
     {
       unsigned char arr[8];
       arr[0] = ptr[7];
@@ -81,43 +99,63 @@ namespace hc {
       return *((double *)arr);
     }
     
+    inline double
+    read_double_le (const unsigned char *ptr)
+      { return *((const double *)ptr); }
+    
     /* 
      * Extracts an MC string (UTF-8 string prefixed with its size in bytes as a
      * varint). Returns false is the contained string is not valid.
      */
-    bool read_string (const unsigned char *ptr, char *out, int out_len,
+    bool read_mc_string (const unsigned char *ptr, char *out, int out_len,
       int *olen = nullptr);
     
     
     
 //------------------------------------------------------------------------------
     
-    inline void
+    inline int
     write_bool (unsigned char *ptr, bool val)
-      { *ptr = val ? 1 : 0; }
+      { *ptr = val ? 1 : 0; return 1; }
     
-    inline void
+    inline int
     write_byte (unsigned char *ptr, unsigned char val)
-      { *ptr = val; }
+      { *ptr = val; return 1; }
     
-    inline void
-    write_short (unsigned char *ptr, unsigned short val)
+    inline int
+    write_short_be (unsigned char *ptr, unsigned short val)
     {
       ptr[0] = val >> 8;
       ptr[1] = val & 0xFF;
+      return 2;
     }
     
-    inline void
-    write_int (unsigned char *ptr, unsigned int val)
+    inline int
+    write_short_le (unsigned char *ptr, unsigned short val)
+    {
+      std::memcpy (ptr, &val, 2);
+      return 2;
+    }
+    
+    inline int
+    write_int_be (unsigned char *ptr, unsigned int val)
     {
       ptr[0] = val >> 24;
       ptr[1] = (val >> 16) & 0xFF;
       ptr[2] = (val >> 8) & 0xFF;
       ptr[3] = val & 0xFF;
+      return 4;
     }
     
-    inline void
-    write_long (unsigned char *ptr, unsigned long long val)
+    inline int
+    write_int_le (unsigned char *ptr, unsigned int val)
+    {
+      std::memcpy (ptr, &val, 4);
+      return 4;
+    }
+    
+    inline int
+    write_long_be (unsigned char *ptr, unsigned long long val)
     {
       ptr[0] = val >> 56;
       ptr[1] = (val >> 48) & 0xFF;
@@ -127,20 +165,36 @@ namespace hc {
       ptr[5] = (val >> 16) & 0xFF;
       ptr[6] = (val >> 8) & 0xFF;
       ptr[7] = val & 0xFF;
+      return 8;
     }
     
-    inline void
-    write_float (unsigned char *ptr, float f)
+    inline int
+    write_long_le (unsigned char *ptr, unsigned long long val)
+    {
+      std::memcpy (ptr, &val, 8);
+      return 8;
+    }
+    
+    inline int
+    write_float_be (unsigned char *ptr, float f)
     {
       unsigned int val = *((unsigned int *)&f);
       ptr[0] = val >> 24;
       ptr[1] = (val >> 16) & 0xFF;
       ptr[2] = (val >> 8) & 0xFF;
       ptr[3] = val & 0xFF;
+      return 4;
     }
     
-    inline void
-    write_double (unsigned char *ptr, double f)
+    inline int
+    write_float_le (unsigned char *ptr, float val)
+    {
+      std::memcpy (ptr, &val, 4);
+      return 4;
+    }
+    
+    inline int
+    write_double_be (unsigned char *ptr, double f)
     {
       unsigned long long val = *((unsigned long long *)&f);
       ptr[0] = val >> 56;
@@ -151,16 +205,21 @@ namespace hc {
       ptr[5] = (val >> 16) & 0xFF;
       ptr[6] = (val >> 8) & 0xFF;
       ptr[7] = val & 0xFF;
+      return 8;
     }
     
-    void write_varint (unsigned char *ptr, unsigned int val,
-      int *olen = nullptr);
+    inline int
+    write_double_le (unsigned char *ptr, double val)
+    {
+      std::memcpy (ptr, &val, 8);
+      return 8;
+    }
     
-    void write_varlong (unsigned char *ptr, unsigned long long val,
-      int *olen = nullptr);
+    int write_varint (unsigned char *ptr, unsigned int val);
     
-    void write_string (unsigned char *ptr, const char *str,
-      int *olen = nullptr);
+    int write_varlong (unsigned char *ptr, unsigned long long val);
+    
+    int write_mc_string (unsigned char *ptr, const char *str);
   
   
   

@@ -50,6 +50,8 @@ namespace hc {
     virtual packet* make_login_success (const std::string& uuid,
       const std::string& username);
     
+    virtual packet* make_login_disconnect (const std::string& msg) override;
+    
     
     // play:
     

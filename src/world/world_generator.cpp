@@ -18,10 +18,42 @@
 
 #include "world/world_generator.hpp"
 #include "world/chunk.hpp"
-#include "world/blocks.hpp"
+#include "slot/blocks.hpp"
+#include <unordered_map>
+
+// generators:
+#include "world/generators/flatgrass.hpp"
 
 
 namespace hc {
+  
+  static world_generator*
+  _create_flatgrass ()
+  {
+    return new flatgrass_world_generator ();
+  }
+  
+  /* 
+   * Creates a new world generator from the given name and initializes it
+   * using the specified initialization string.
+   */
+  world_generator*
+  world_generator::create (const char *name, const std::string& init_str)
+  {
+    static std::unordered_map<std::string, world_generator* (*) ()> _map {
+       { "flatgrass", &_create_flatgrass }
+    };
+    
+    auto itr = _map.find (name);
+    if (itr == _map.end ())
+      return nullptr;
+    
+    auto gen = itr->second ();
+    gen->setup (init_str);
+    return gen;
+  }
+  
+  
   
   /* 
    * Generates an "edge" chunk.

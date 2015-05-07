@@ -27,7 +27,9 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+// resolve name collisions:
 #undef uuid_t
+#undef BS_SOLID
 
 #endif
 

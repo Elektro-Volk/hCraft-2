@@ -32,8 +32,24 @@ namespace hc {
   // forward decs:
   class chunk;
   class world_generator;
+  class world_provider;
   class player;
   class server;
+  class logger;
+  
+  
+  /* 
+   * Stores static information about a world that can be loaded and saved
+   * from/to disk.
+   */
+  struct world_data
+  {
+    std::string name;     // world name
+    long long seed;       // used for world generation
+    std::string gen_name; // name of world generator
+    entity_pos spawn_pos; // spawn position
+  };
+  
   
   /* 
    * An organized collection of chunks.
@@ -41,24 +57,48 @@ namespace hc {
   class world
   {
     server& srv;
+    logger& log;
+    
+    world_data inf;
     
     std::unordered_map<unsigned long long, chunk *> chunks;
     world_generator *gen;
     std::mutex ch_mtx;
-    entity_pos spawn_pos;
     async_generator async_gen;
+    world_provider *prov;
     
     std::vector<player *> pls;
     std::mutex pl_mtx;
     
   public:
     inline server& get_server () { return this->srv; }
-    inline entity_pos get_spawn_pos () const { return this->spawn_pos; }
+    inline entity_pos get_spawn_pos () const { return this->inf.spawn_pos; }
     inline async_generator& get_async_gen () { return this->async_gen; }
+    inline world_generator* get_generator () { return this->gen; }
+    
+    inline world_data& get_info () { return this->inf; }
+    inline const std::string& get_name () { return this->inf.name; }
+    
+  private:
+    chunk* get_chunk_no_lock (int x, int z);
+    
+    void set_chunk_neighbours (chunk *ch);
+    
+  private:
+    // used by world::load_from ()
+    world (const world_data& wd, server& srv, world_generator *gen,
+      world_provider *prov);
     
   public:
-    world (server& srv, world_generator *gen);
+    world (const std::string& name, server& srv, world_generator *gen,
+      world_provider *prov);
     ~world ();
+  
+  public:
+    /*
+     * Loads a world from the specified path.
+     */
+    static world* load_from (const std::string& path, server& srv);
     
   public:
     /* 
@@ -67,15 +107,15 @@ namespace hc {
   //----------------------------------------------------------------------------
   
     /*
-     * Places the specified chunk in the given chunk coordinates.
+     * Inserts the specified chunk into the world.
      */
-    void set_chunk (int x, int y, chunk *ch);
+    void put_chunk (chunk *ch);
     
     /* 
      * Returns the chunk located in the specified coordiantes, or null if there
      * is none.
      */
-    chunk* get_chunk (int x, int y);
+    chunk* get_chunk (int x, int z);
     
     /* 
      * Performs the first thing that works out of the following three:
@@ -83,8 +123,23 @@ namespace hc {
      *     2. Load the chunk from disk.
      *     3. Generate the chunk.
      */
-    chunk* load_chunk (int x, int y);
+    chunk* load_chunk (int x, int z);
   
+  //----------------------------------------------------------------------------
+  
+  
+  
+    /* 
+     * Block manipulation:
+     */
+  //----------------------------------------------------------------------------
+  
+    void set_id (int x, int y, int z, unsigned short id);
+    unsigned short get_id (int x, int y, int z);
+    
+    void set_sky_light (int x, int y, int z, unsigned char sl);
+    unsigned char get_sky_light (int x, int y, int z);
+    
   //----------------------------------------------------------------------------
     
     
@@ -105,6 +160,13 @@ namespace hc {
     void remove_player (player *pl);
     
   //----------------------------------------------------------------------------
+    
+    
+    
+    /* 
+     * Saves the world to disk.
+     */
+    void save_all ();
   };
 }
 

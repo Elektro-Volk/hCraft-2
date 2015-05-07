@@ -26,6 +26,7 @@
 #include "system/logger.hpp"
 #include "world/world.hpp"
 #include "world/chunk.hpp"
+#include "slot/blocks.hpp"
 #include <chrono>
 #include <algorithm>
 
@@ -307,10 +308,13 @@ namespace hc {
   void
   player::on_login ()
   {
-    this->message () << "§7Welcome to an §5hCraft §a2 §7server§f!" << endm;
+    this->message ("§eWelcome to an §6hCraft 2 §eserver§f!");
     
     this->join_world (srv.get_main_world ());
   }
+  
+  
+  
   
   /* 
    * Invoked by the underlying packet handler when the player's
@@ -335,6 +339,8 @@ namespace hc {
       }
   }
   
+  
+  
   /* 
    * Invoked by the underlying packet handler when the player attempts to
    * send out a chat message.
@@ -342,11 +348,61 @@ namespace hc {
   void
   player::on_chat (const std::string& msg)
   {
+    if (this->conn.is_disconnected () || !this->spawned)
+      return;
+    
+    log (LT_CHAT) << this->get_username () << ": " << msg << std::endl;
+    
     player *me = this;
     this->srv.all_players (
       [me, &msg] (player *pl) {
         pl->message () << "§e" << me->get_username () << "§f: " << msg << endm;
       });
+  }
+  
+  
+  
+  static bool
+  _block_in_range (entity_pos ppos, block_pos bpos)
+  {
+#define MAX_DIGGING_DISTANCE    6
+    
+    double xd = ppos.x - bpos.x;
+    double yd = ppos.y - bpos.y;
+    double zd = ppos.z - bpos.z;
+    int max_d = MAX_DIGGING_DISTANCE;
+    
+    return (xd * xd + yd * yd + zd * zd) <= (max_d * max_d);
+  }
+  
+  /* 
+   * Invoked when the player attempts to destroy a block.
+   */
+  void
+  player::on_digging (int x, int y, int z, digging_state state, block_face face)
+  {
+    if (this->conn.is_disconnected () || !this->spawned)
+      return;
+    
+    if (y < 0 || y > 255)
+      { this->kick ("You can't dig there (Y coordinate out of bounds)"); return; }
+    
+    // make sure the block the player is trying to break is within reach.
+    if (!_block_in_range (this->pos, block_pos (x, y, z)))
+      {
+        if (state == DIG_FINISH)
+          ; // TODO: resend original block
+        return;
+      }
+    
+    switch (state)
+      {
+      case DIG_START:
+        this->w->set_id (x, y, z, BT_AIR);
+        break;
+      
+      default: ;
+      }
   }
   
   

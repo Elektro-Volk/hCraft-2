@@ -63,7 +63,7 @@ namespace hc {
   short
   packet_reader::read_short ()
   {
-    short v = bin::read_short (this->arr + this->pos);
+    short v = bin::read_short_be (this->arr + this->pos);
     this->pos += 2;
     return v;
   }
@@ -71,7 +71,7 @@ namespace hc {
   int
   packet_reader::read_int ()
   {
-    int v = bin::read_int (this->arr + this->pos);
+    int v = bin::read_int_be (this->arr + this->pos);
     this->pos += 4;
     return v;
   }
@@ -79,7 +79,7 @@ namespace hc {
   long long
   packet_reader::read_long ()
   {
-    long long v = bin::read_long (this->arr + this->pos);
+    long long v = bin::read_long_be (this->arr + this->pos);
     this->pos += 8;
     return v;
   }
@@ -87,7 +87,7 @@ namespace hc {
   float
   packet_reader::read_float ()
   {
-    float v = bin::read_float (this->arr + this->pos);
+    float v = bin::read_float_be (this->arr + this->pos);
     this->pos += 4;
     return v;
   }
@@ -95,7 +95,7 @@ namespace hc {
   double
   packet_reader::read_double ()
   {
-    double v = bin::read_double (this->arr + this->pos);
+    double v = bin::read_double_be (this->arr + this->pos);
     this->pos += 8;
     return v;
   }
@@ -122,7 +122,7 @@ namespace hc {
   packet_reader::read_string (char *out, int len)
   {
     int vl;
-    if (!bin::read_string (this->arr + this->pos, out, len, &vl))
+    if (!bin::read_mc_string (this->arr + this->pos, out, len, &vl))
       return false;
     this->pos += vl;
     return true;
@@ -217,8 +217,7 @@ namespace hc {
     if ((this->pos + 2) > this->cap)
       this->expand ((this->cap * 16)/10 + 2);
     
-    bin::write_short (this->arr + this->pos, val);
-    this->pos += 2;
+    this->pos += bin::write_short_be (this->arr + this->pos, val);
     if (this->pos > this->len)
       this->len = this->pos;
   }
@@ -229,8 +228,7 @@ namespace hc {
     if ((this->pos + 4) > this->cap)
       this->expand ((this->cap * 16)/10 + 4);
     
-    bin::write_int (this->arr + this->pos, val);
-    this->pos += 4;
+    this->pos += bin::write_int_be (this->arr + this->pos, val);
     if (this->pos > this->len)
       this->len = this->pos;
   }
@@ -241,8 +239,7 @@ namespace hc {
     if ((this->pos + 8) > this->cap)
       this->expand ((this->cap * 16)/10 + 8);
     
-    bin::write_long (this->arr + this->pos, val);
-    this->pos += 8;
+    this->pos += bin::write_long_be (this->arr + this->pos, val);
     if (this->pos > this->len)
       this->len = this->pos;
   }
@@ -253,8 +250,7 @@ namespace hc {
     if ((this->pos + 4) > this->cap)
       this->expand ((this->cap * 16)/10 + 4);
     
-    bin::write_float (this->arr + this->pos, val);
-    this->pos += 4;
+    this->pos += bin::write_float_be (this->arr + this->pos, val);
     if (this->pos > this->len)
       this->len = this->pos;
   }
@@ -265,8 +261,7 @@ namespace hc {
     if ((this->pos + 8) > this->cap)
       this->expand ((this->cap * 16)/10 + 8);
     
-    bin::write_double (this->arr + this->pos, val);
-    this->pos += 8;
+    this->pos += bin::write_double_be (this->arr + this->pos, val);
     if (this->pos > this->len)
       this->len = this->pos;
   }
@@ -277,9 +272,7 @@ namespace hc {
     if ((this->pos + 5) > this->cap)
       this->expand ((this->cap * 16)/10 + 5);
     
-    int vl = 0;
-    bin::write_varint (this->arr + this->pos, val, &vl);
-    this->pos += vl;
+    this->pos += bin::write_varint (this->arr + this->pos, val);
     if (this->pos > this->len)
       this->len = this->pos;
   }
@@ -290,9 +283,7 @@ namespace hc {
     if ((this->pos + 10) > this->cap)
       this->expand ((this->cap * 16)/10 + 10);
     
-    int vl = 0;
-    bin::write_varlong (this->arr + this->pos, val, &vl);
-    this->pos += vl;
+    this->pos += bin::write_varlong (this->arr + this->pos, val);
     if (this->pos > this->len)
       this->len = this->pos;
   }
@@ -311,9 +302,7 @@ namespace hc {
     if ((this->pos + ub) > this->cap)
       this->expand ((this->cap * 14)/10 + ub);
     
-    int vl = 0;
-    bin::write_string (this->arr + this->pos, str.c_str (), &vl);
-    this->pos += vl;
+    this->pos += bin::write_mc_string (this->arr + this->pos, str.c_str ());
     if (this->pos > this->len)
       this->len = this->pos;
   }

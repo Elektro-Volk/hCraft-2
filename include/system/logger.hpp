@@ -31,6 +31,7 @@ namespace hc {
   enum log_type
   {
     LT_DEBUG,
+    LT_CHAT,
     LT_SYSTEM,
     LT_WARNING,
     LT_ERROR,

@@ -17,7 +17,7 @@
  */
 
 #include "world/chunk.hpp"
-#include "world/blocks.hpp"
+#include "slot/blocks.hpp"
 #include <cstring>
 
 
@@ -32,12 +32,16 @@ namespace hc {
   
   
   
-  chunk::chunk ()
+  chunk::chunk (int x, int z)
+    : pos (x, z)
   {
     for (int i = 0; i < 16; ++i)
       this->subs[i] = nullptr;
     std::memset (this->biomes, 1, sizeof this->biomes);
     std::memset (this->hmap, 0, sizeof this->hmap);
+    
+    for (int i = 0; i < 4; ++i)
+      this->neighbours[i] = nullptr;
   }
   
   chunk::~chunk ()
@@ -81,10 +85,10 @@ namespace hc {
     auto binf = block_info::from_id (id);
     if (binf && binf->opaque && binf->state == BS_SOLID)
       {
-        if (y > this->hmap[hind])
+        if (y >= this->hmap[hind])
           this->hmap[hind] = y + 1;
       }
-    else if (this->hmap[hind] == y)
+    else if (this->hmap[hind] == y + 1)
       this->recalc_height_at (x, z, y - 1);
   }
   
@@ -128,7 +132,7 @@ namespace hc {
   
   
   void
-  chunk::set_sky_light (int x, int y, int z, unsigned char meta)
+  chunk::set_sky_light (int x, int y, int z, unsigned char sl)
   {
     int sy = y >> 4;
     sub_chunk *sub = this->subs[sy];
@@ -140,12 +144,12 @@ namespace hc {
     if (index & 1)
       {
         sub->sl[si] &= 0x0F;
-        sub->sl[si] |= meta << 4;
+        sub->sl[si] |= sl << 4;
       }
     else
       {
         sub->sl[si] &= 0xF0;
-        sub->sl[si] |= meta;
+        sub->sl[si] |= sl;
       }
   }
   
@@ -165,7 +169,7 @@ namespace hc {
   
   
   void
-  chunk::set_block_light (int x, int y, int z, unsigned char meta)
+  chunk::set_block_light (int x, int y, int z, unsigned char bl)
   {
     int sy = y >> 4;
     sub_chunk *sub = this->subs[sy];
@@ -177,12 +181,12 @@ namespace hc {
     if (index & 1)
       {
         sub->bl[si] &= 0x0F;
-        sub->bl[si] |= meta << 4;
+        sub->bl[si] |= bl << 4;
       }
     else
       {
         sub->bl[si] &= 0xF0;
-        sub->bl[si] |= meta;
+        sub->bl[si] |= bl;
       }
   }
   
@@ -218,10 +222,10 @@ namespace hc {
     auto binf = block_info::from_id (id);
     if (binf && binf->opaque && binf->state == BS_SOLID)
       {
-        if (y > this->hmap[hind])
+        if (y >= this->hmap[hind])
           this->hmap[hind] = y + 1;
       }
-    else if (this->hmap[hind] == y)
+    else if (this->hmap[hind] == y + 1)
       this->recalc_height_at (x, z, y - 1);
   }
 }

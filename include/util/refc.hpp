@@ -35,7 +35,7 @@ namespace hc {
     inline int get () { return this->refc.load (); }
     
   public:
-    ref_counter () { }
+    ref_counter () { this->refc = 0; }
   };
 }
 

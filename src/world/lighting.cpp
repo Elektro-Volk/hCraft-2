@@ -20,10 +20,13 @@
 #include "util/thread.hpp"
 #include "world/chunk.hpp"
 #include "util/position.hpp"
-#include "world/blocks.hpp"
+#include "slot/blocks.hpp"
+#include "world/world.hpp"
 #include <functional>
 #include <chrono>
 #include <queue>
+
+#include <iostream> // DEBUG
 
 
 namespace hc {
@@ -43,14 +46,99 @@ namespace hc {
   void
   lighting_manager::worker_func ()
   {
-#define UPDATE_PER_CYCLE    1000
-#define SLEEP_TIME             2
+#define UPDATES_PER_CYCLE       1000
+#define SLEEP_TIME                 2
+#define OVERLOAD_THRESHOLD   2000000
     
     while (this->running)
       {
         std::this_thread::sleep_for (std::chrono::milliseconds (SLEEP_TIME));
+        if (this->updates.empty ())
+          continue;
         
+        std::lock_guard<std::mutex> guard { this->mtx };
         
+        int processed;
+        for (processed = 0; processed < UPDATES_PER_CYCLE; ++processed)
+          {
+            if (this->updates.empty ())
+              break;
+            work_item item = this->updates.back ();
+            this->updates.pop_back ();
+            
+            this->calc_sl (item.w, item.x, item.y, item.z);
+            
+          }
+      }
+  }
+  
+  
+  
+#ifndef MAX
+# define MAX(A, B) (((A) > (B)) ? (A) : (B))
+#endif
+  
+  /* 
+   * Calculates the right sky light value for the specified block and
+   * queues its neighbours for further checking.
+   */
+  void
+  lighting_manager::calc_sl (world *w, int x, int y, int z)
+  {
+    chunk *ch = w->get_chunk (x >> 4, z >> 4);
+    if (!ch)
+      return;
+    
+    int bx = x & 15;
+    int bz = z & 15;
+    
+    // neighbouring chunks:
+    chunk *east = ch->get_neighbour (DIR_EAST);
+    chunk *west = ch->get_neighbour (DIR_WEST);
+    chunk *north = ch->get_neighbour (DIR_NORTH);
+    chunk *south = ch->get_neighbour (DIR_SOUTH);
+    
+    int sl;
+    if (y >= ch->get_height (bx, bz))
+      sl = 15;
+    else
+      {
+        // neighbouring block sl values
+        int n_xp = (bx == 15)     // +x
+          ? (east ? east->get_sky_light (0, y, bz) : 0)
+          : ch->get_sky_light (bx + 1, y, bz);
+        int n_xn = (bx == 0)      // -x
+          ? (west ? west->get_sky_light (15, y, bz) : 0)
+          : ch->get_sky_light (bx - 1, y, bz);
+        int n_zp = (bz == 15)     // +z
+          ? (south ? south->get_sky_light (bx, y, 0) : 0)
+          : ch->get_sky_light (bx, y, bz + 1);
+        int n_zn = (bz == 0)      // -z
+          ? (north ? north->get_sky_light (bx, y, 15) : 0)
+          : ch->get_sky_light (bx, y, bz - 1);
+        int n_yp = (y == 255) ? 15 : ch->get_sky_light (bx, y + 1, bz);
+        int n_yn = (y == 0) ? 0 : ch->get_sky_light (bx, y - 1, bz);
+        
+        int max =
+          MAX(n_xp, MAX(n_xn, MAX(n_zp, MAX(n_zn, MAX(n_yp, MAX(n_yn, 0))))));
+        sl = max - 1;
+        if (sl < 0)
+          sl = 0;
+      }
+      
+    if (sl != ch->get_sky_light (bx, y, bz))
+      {
+        ch->set_sky_light (bx, y, bz, sl);
+        
+        // queue neighbours
+        this->enqueue_sl_no_lock (w, x - 1, y, z);
+        this->enqueue_sl_no_lock (w, x + 1, y, z);
+        this->enqueue_sl_no_lock (w, x, y, z - 1);
+        this->enqueue_sl_no_lock (w, x, y, z + 1);
+        if (y > 0)
+          this->enqueue_sl_no_lock (w, x, y - 1, z);
+        if (y < 255)
+          this->enqueue_sl_no_lock (w, x, y + 1, z);
       }
   }
   
@@ -134,6 +222,37 @@ namespace hc {
           for (int y = h - 1; y >= 0; --y)
             ch->set_sky_light (x, y, z, 0);
         }
+  }
+  
+  
+  
+  /* 
+   * Queues a lighting update for the specified block.
+   */
+  void
+  lighting_manager::enqueue (world *w, int x, int y, int z)
+  {
+    std::lock_guard<std::mutex> guard { this->mtx };
+    this->enqueue_sl_no_lock (w, x, y, z);
+  }
+  
+  // no locking
+  void
+  lighting_manager::enqueue_sl_no_lock (world *w, int x, int y, int z)
+  {
+    // block must be able to pass light
+    block_info *binf = block_info::from_id (w->get_id (x, y, z));
+    if (!binf || binf->opaque)
+      w->set_sky_light (x, y, z, 15 - binf->opacity);
+    else
+      {
+        work_item item;
+        item.w = w;
+        item.x = x;
+        item.y = y;
+        item.z = z;
+        this->updates.push_back (item);
+      }
   }
 }
 

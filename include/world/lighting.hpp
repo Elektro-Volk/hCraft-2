@@ -20,6 +20,8 @@
 #define _hCraft2__WORLD__LIGHTING__H_
 
 #include <vector>
+#include <deque>
+#include <mutex>
 
 
 namespace hc {
@@ -27,6 +29,7 @@ namespace hc {
   // forward decs:
   class thread;
   class chunk;
+  class world;
   
   /* 
    * In charge of properly setting lighting values for blocks.
@@ -40,8 +43,16 @@ namespace hc {
       hc::thread *th;
     };
     
+    struct work_item
+    {
+      world *w;
+      int x, y, z;
+    };
+    
   private:
     std::vector<worker *> workers;
+    std::deque<work_item> updates;
+    std::mutex mtx;
     bool running;
     
   public:
@@ -50,6 +61,15 @@ namespace hc {
     
   private:
     void worker_func ();
+    
+  private:
+    /* 
+     * Calculates the right sky light value for the specified block and
+     * queues its neighbours for further checking.
+     */
+    void calc_sl (world *w, int x, int y, int z);
+    
+    void enqueue_sl_no_lock (world *w, int x, int y, int z);
     
   public:
     /* 
@@ -69,6 +89,11 @@ namespace hc {
      * adjacent neighbours into consideration.
      */
     void light_chunk (chunk *ch);
+    
+    /* 
+     * Queues a lighting update for the specified block.
+     */
+    void enqueue (world *w, int x, int y, int z);
   };
 }
 
