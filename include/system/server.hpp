@@ -29,6 +29,7 @@
 #include <functional>
 #include <event2/util.h>
 #include <cryptopp/rsa.h>
+#include <unordered_map>
 
 
 // forward decs:
@@ -45,6 +46,7 @@ namespace hc {
   class thread;
   class world;
   class lighting_manager;
+  class command;
   
   
   /* 
@@ -138,6 +140,8 @@ namespace hc {
     std::mutex world_mtx;
     thread_pool::seq_class *gen_seq; // used for world generation
     lighting_manager lman;
+    
+    std::unordered_map<std::string, command *> cmds;
     
     // encryption/authentication:
     CryptoPP::RSA::PrivateKey rsa_p;
@@ -234,6 +238,14 @@ namespace hc {
      */
     void all_players (std::function<void (player *)>&& cb);
     
+    
+    
+    /* 
+     * Finds and returns a command whose name matches the one specified from
+     * the server's list of registered commands.
+     */
+    command* find_command (const std::string& name);
+    
   private:
     /* 
      * Scheduled functions:
@@ -286,6 +298,12 @@ namespace hc {
      */
     void init_worlds ();
     void fin_worlds ();
+    
+    /* 
+     * Loads and sets up server/player commands.
+     */
+    void init_cmds ();
+    void fin_cmds ();
     
     /* 
      * Sets up the server's worker threads.

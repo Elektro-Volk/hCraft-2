@@ -16,37 +16,33 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "world/generators/flatgrass.hpp"
-#include "world/chunk.hpp"
-#include "world/blocks.hpp"
+#include "cmd/command.hpp"
+#include <unordered_map>
+#include <string>
+
+// commands:
+#include "cmd/info/help.hpp"
 
 
 namespace hc {
   
-  void
-  flatgrass_world_generator::generate (chunk *ch)
+  /* 
+   * Creates and returns a command from the specified command name.
+   */
+  command*
+  command::create (const char *name)
   {
-    for (int y = 0; y < 58; ++y)
-      for (int x = 0; x < 16; ++x)
-        for (int z = 0; z < 16; ++z)
-          ch->set_id (x, y, z, BT_STONE);
+#define CREATE_HANDLER(NAME) [] { return static_cast<command *> (new cmd_##NAME ()); }
+#define DEFINE_CMD(NAME) { #NAME , CREATE_HANDLER(NAME) }
     
-    for (int y = 58; y < 64; ++y)
-      for (int x = 0; x < 16; ++x)
-        for (int z = 0; z < 16; ++z)
-          ch->set_id (x, y, z, BT_DIRT);
-     
-    for (int x = 0; x < 16; ++x)
-      for (int z = 0; z < 16; ++z)
-        ch->set_id (x, 64, z, BT_GRASS);
-  }
-  
-  
-  
-  entity_pos
-  flatgrass_world_generator::find_spawn ()
-  {
-    return entity_pos (0.0, 66.0, 0.0, 0.0, 0.0);
+    const static std::unordered_map<std::string, command* (*) ()> _map {
+      DEFINE_CMD(help)
+    };
+    
+    auto itr = _map.find (name);
+    if (itr == _map.end ())
+      return nullptr;
+    return itr->second ();
   }
 }
 

@@ -16,37 +16,28 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "world/generators/flatgrass.hpp"
-#include "world/chunk.hpp"
-#include "world/blocks.hpp"
+#include "inv/slot.hpp"
 
 
 namespace hc {
   
-  void
-  flatgrass_world_generator::generate (chunk *ch)
+  slot_item::slot_item (unsigned short id, unsigned short damage, int amount)
   {
-    for (int y = 0; y < 58; ++y)
-      for (int x = 0; x < 16; ++x)
-        for (int z = 0; z < 16; ++z)
-          ch->set_id (x, y, z, BT_STONE);
-    
-    for (int y = 58; y < 64; ++y)
-      for (int x = 0; x < 16; ++x)
-        for (int z = 0; z < 16; ++z)
-          ch->set_id (x, y, z, BT_DIRT);
-     
-    for (int x = 0; x < 16; ++x)
-      for (int z = 0; z < 16; ++z)
-        ch->set_id (x, 64, z, BT_GRASS);
+    this->id = id;
+    this->damage = damage;
+    this->amount = amount;
   }
   
-  
-  
-  entity_pos
-  flatgrass_world_generator::find_spawn ()
+  slot_item::slot_item (const slot_item& other)
   {
-    return entity_pos (0.0, 66.0, 0.0, 0.0, 0.0);
+    this->id = other.id;
+    this->damage = other.damage;
+    this->amount = other.amount;
+  }
+  
+  slot_item::~slot_item ()
+  {
+    
   }
 }
 

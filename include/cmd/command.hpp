@@ -16,37 +16,45 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "world/generators/flatgrass.hpp"
-#include "world/chunk.hpp"
-#include "world/blocks.hpp"
+#ifndef _hCraft2__CMD__COMMAND__H_
+#define _hCraft2__CMD__COMMAND__H_
+
+#include <string>
 
 
 namespace hc {
   
-  void
-  flatgrass_world_generator::generate (chunk *ch)
+  // forward decs:
+  class player;
+  
+  
+  /* 
+   * Base class for all server/player commands.
+   * Commands are invoked by prefixing their name with a forward slash '/'.
+   */
+  class command
   {
-    for (int y = 0; y < 58; ++y)
-      for (int x = 0; x < 16; ++x)
-        for (int z = 0; z < 16; ++z)
-          ch->set_id (x, y, z, BT_STONE);
+  public:
+    virtual ~command () { }
     
-    for (int y = 58; y < 64; ++y)
-      for (int x = 0; x < 16; ++x)
-        for (int z = 0; z < 16; ++z)
-          ch->set_id (x, y, z, BT_DIRT);
-     
-    for (int x = 0; x < 16; ++x)
-      for (int z = 0; z < 16; ++z)
-        ch->set_id (x, 64, z, BT_GRASS);
-  }
+  public:
+    /* 
+     * Returns the name of the command.
+     */
+    virtual const char* name () = 0;
+    
+    /* 
+     * Executes the command for the specified player.
+     */
+    virtual void execute (player *pl, const std::string& args) = 0;
   
-  
-  
-  entity_pos
-  flatgrass_world_generator::find_spawn ()
-  {
-    return entity_pos (0.0, 66.0, 0.0, 0.0, 0.0);
-  }
+  public:
+    /* 
+     * Creates and returns a command from the specified command name.
+     */
+    static command* create (const char *name);
+  };
 }
+
+#endif
 

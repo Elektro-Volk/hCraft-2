@@ -16,8 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _hCraft2__SLOT__BLOCKS__H_
-#define _hCraft2__SLOT__BLOCKS__H_
+#ifndef _hCraft2__WORLD__BLOCKS__H_
+#define _hCraft2__WORLD__BLOCKS__H_
 
 
 namespace hc {

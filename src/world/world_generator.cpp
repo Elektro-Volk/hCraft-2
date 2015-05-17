@@ -18,7 +18,7 @@
 
 #include "world/world_generator.hpp"
 #include "world/chunk.hpp"
-#include "slot/blocks.hpp"
+#include "world/blocks.hpp"
 #include <unordered_map>
 
 // generators:

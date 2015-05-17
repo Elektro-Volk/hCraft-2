@@ -16,14 +16,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "slot/slot.hpp"
+#include "inv/inventory.hpp"
 
 
 namespace hc {
   
-  slot_item::slot_item (unsigned short id, unsigned short damage, int amount)
+  inventory::inventory ()
+    : window (0, 45)
   {
-    
+    this->push_add_range (36, 44); // hotbar
+    this->push_add_range (9, 35);  // main inventory
   }
 }
 

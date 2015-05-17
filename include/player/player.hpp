@@ -24,6 +24,7 @@
 #include "util/thread_pool.hpp"
 #include "util/refc.hpp"
 #include "util/common.hpp"
+#include "inv/inventory.hpp"
 #include <string>
 #include <random>
 #include <mutex>
@@ -87,6 +88,10 @@ namespace hc {
    */
   class player
   {
+    // put handlers here:
+    friend class mc18_packet_handler;
+  
+  private:
     server& srv;
     connection& conn;
     logger& log;
@@ -94,6 +99,7 @@ namespace hc {
     uuid_t uuid;
     std::string name;
     std::mt19937 rnd;
+    game_mode gm;
     
     // keep-alive related:
     bool ka_expecting;  // whether we're expecting a response keep-alive packet.
@@ -107,6 +113,10 @@ namespace hc {
     entity_pos spawn_pos;
     chunk_pos last_cp;
     int gen_tok;
+    
+    window *openw;  // the window currently open.
+    inventory inv;
+    int cur_slot;
     
     // the player will be destroyed by the server's cleanup_conns() task once
     // this reference counter drops to zero.
@@ -122,6 +132,9 @@ namespace hc {
     inline world* get_world () { return this->w; }
     inline entity_pos& position () { return this->pos; }
     
+    inline inventory& get_inv () { return this->inv; }
+    inline window* get_window () { return this->openw; }
+    
   public:
     player (connection& conn, uuid_t uuid, const std::string& name);
     ~player ();
@@ -132,6 +145,8 @@ namespace hc {
      * chunks.
      */
     void stream_chunks ();
+    
+    void handle_command (const std::string& msg);
     
   public:
     /* 
@@ -165,7 +180,12 @@ namespace hc {
     /* 
      * Invoked when the player attempts to destroy a block.
      */
-    void on_digging (int x, int y, int z, digging_state state, block_face face);
+    void on_dig (int x, int y, int z, digging_state state, block_face face);
+    
+    /* 
+     * Invoked when the player tries to place a block down.
+     */
+    void on_place (int x, int y, int z, block_face face);
     
 //------------------------------------------------------------------------------
     
@@ -210,6 +230,29 @@ namespace hc {
      */
     void join_world (world *w, entity_pos pos);
     void join_world (world *w);
+    
+    
+    
+    inline game_mode
+    get_gm () const
+      { return this->gm; }
+    
+    /* 
+     * Respawns the player with a different game mode.
+     */
+    void set_gm (game_mode gm);
+    
+    
+    
+    /* 
+     * Opens the specified window (and shows it to the player).
+     */
+    void open_window (window *w);
+    
+    /* 
+     * Close currently open window.
+     */
+    void close_window ();
     
     
     

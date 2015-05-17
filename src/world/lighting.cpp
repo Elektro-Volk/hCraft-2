@@ -20,7 +20,7 @@
 #include "util/thread.hpp"
 #include "world/chunk.hpp"
 #include "util/position.hpp"
-#include "slot/blocks.hpp"
+#include "world/blocks.hpp"
 #include "world/world.hpp"
 #include <functional>
 #include <chrono>
@@ -128,17 +128,9 @@ namespace hc {
       
     if (sl != ch->get_sky_light (bx, y, bz))
       {
+        //std::cout << "(" << x << ", " << y << ", " << z << "): " << sl << std::endl;
         ch->set_sky_light (bx, y, bz, sl);
-        
-        // queue neighbours
-        this->enqueue_sl_no_lock (w, x - 1, y, z);
-        this->enqueue_sl_no_lock (w, x + 1, y, z);
-        this->enqueue_sl_no_lock (w, x, y, z - 1);
-        this->enqueue_sl_no_lock (w, x, y, z + 1);
-        if (y > 0)
-          this->enqueue_sl_no_lock (w, x, y - 1, z);
-        if (y < 255)
-          this->enqueue_sl_no_lock (w, x, y + 1, z);
+        this->enqueue_sl_neighbours (w, x, y, z);
       }
   }
   
@@ -236,14 +228,26 @@ namespace hc {
     this->enqueue_sl_no_lock (w, x, y, z);
   }
   
+  
   // no locking
   void
   lighting_manager::enqueue_sl_no_lock (world *w, int x, int y, int z)
   {
+    chunk *ch = w->get_chunk (x >> 4, z >> 4);
+    int bx = x & 15;
+    int bz = z & 15;
+    
     // block must be able to pass light
-    block_info *binf = block_info::from_id (w->get_id (x, y, z));
+    block_info *binf = block_info::from_id (ch->get_id (bx, y, bz));
     if (!binf || binf->opaque)
-      w->set_sky_light (x, y, z, 15 - binf->opacity);
+      {
+        unsigned char nsl = 15 - binf->opacity;
+        if (nsl != ch->get_sky_light (bx, y, bz))
+          {
+            ch->set_sky_light (bx, y, bz, nsl);
+            this->enqueue_sl_neighbours (w, x, y, z);
+          }
+      }
     else
       {
         work_item item;
@@ -253,6 +257,19 @@ namespace hc {
         item.z = z;
         this->updates.push_back (item);
       }
+  }
+  
+  void
+  lighting_manager::enqueue_sl_neighbours (world *w, int x, int y, int z)
+  {
+    this->enqueue_sl_no_lock (w, x - 1, y, z);
+    this->enqueue_sl_no_lock (w, x + 1, y, z);
+    this->enqueue_sl_no_lock (w, x, y, z - 1);
+    this->enqueue_sl_no_lock (w, x, y, z + 1);
+    if (y > 0)
+      this->enqueue_sl_no_lock (w, x, y - 1, z);
+    if (y < 255)
+      this->enqueue_sl_no_lock (w, x, y + 1, z);
   }
 }
 

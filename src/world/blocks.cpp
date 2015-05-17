@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "slot/blocks.hpp"
+#include "world/blocks.hpp"
 #include <cstring>
 #include <vector>
 #include <unordered_map>

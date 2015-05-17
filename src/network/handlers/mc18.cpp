@@ -88,6 +88,45 @@ namespace hc {
   
   
   
+  static slot_item*
+  _read_slot (packet_reader& reader)
+  {
+    short id = reader.read_short ();
+    if (id == -1)
+      return new slot_item (id);
+    
+    unsigned char count = reader.read_byte ();
+    unsigned short damage = reader.read_short ();
+    unsigned char more = reader.read_byte ();
+    
+    if (more == 0)
+      return new slot_item (id, damage, count);
+    
+    // TODO:
+    throw std::runtime_error ("_read_slot: unimplemented");
+  }
+  
+  static block_pos
+  _read_pos (packet_reader& reader)
+  {
+    unsigned long long pos = reader.read_long ();
+    
+    int x = pos >> 38;
+    int y = (pos >> 26) & 0xFFF;
+    int z = pos & 0x3FFFFFF;
+    
+    if (x & (1 << 25))
+      x |= (0xFFFFFFFFU << 26);
+    if (y & (1 << 11))
+      x |= (0xFFFFFFFFU << 12);
+    if (z & (1 << 25))
+      z |= (0xFFFFFFFFU << 26);
+    
+    return block_pos (x, y, z);
+  }
+  
+  
+  
 //------------------------------------------------------------------------------
   // 
   // Handshake:
@@ -209,6 +248,8 @@ namespace hc {
     this->pl = pl;
     log (LT_SYSTEM) << "Player `" << pl->get_username () << "' logging in from @"
       << this->conn->get_ip () << " (UUID: " << pl->get_uuid ().str () << ")" << std::endl;
+    
+    this->pl->set_gm (GM_CREATIVE);
     
     // initialize verification token
     std::mt19937 rnd;
@@ -424,24 +465,144 @@ namespace hc {
     //
     
     unsigned char status_byte = reader.read_byte ();
-    unsigned long long pos = reader.read_long ();
+    block_pos pos = _read_pos (reader);
     unsigned char face_byte = reader.read_byte ();
     
     digging_state state = (digging_state)status_byte;
     block_face face = (block_face)face_byte;
     
-    int x = pos >> 38;
-    int y = (pos >> 26) & 0xFFF;
-    int z = pos & 0x3FFFFFF;
+    this->pl->on_dig (pos.x, pos.y, pos.z, state, face);
+  }
+  
+  void
+  mc18_packet_handler::handle_p08 (packet_reader& reader)
+  {
+    // 
+    // 0x08: Player Block Placement
+    //
     
-    if (x & (1 << 25))
-      x |= (0xFFFFFFFFU << 26);
-    if (y & (1 << 11))
-      x |= (0xFFFFFFFFU << 12);
-    if (z & (1 << 25))
-      z |= (0xFFFFFFFFU << 26);
+    block_pos pos = _read_pos (reader);
+    unsigned char face_byte = reader.read_byte ();
+    std::unique_ptr<slot_item> slot { _read_slot (reader) };
     
-    this->pl->on_digging (x, y, z, state, face);
+    // cursor position:
+    reader.read_byte ();
+    reader.read_byte ();
+    reader.read_byte ();
+    
+    block_face face = (block_face)face_byte;
+    
+    this->pl->on_place (pos.x, pos.y, pos.z, face);
+  }
+  
+  void
+  mc18_packet_handler::handle_p09 (packet_reader& reader)
+  {
+    // 
+    // 0x09: Held Item Change
+    //
+    
+    short slot = reader.read_short ();
+    if (slot < 0 || slot > 8)
+      {
+        this->conn->disconnect ();
+        return;
+      }
+    
+    this->pl->cur_slot = slot;
+    
+    logger& log = this->conn->get_server ().get_logger ();
+    log (LT_DEBUG) << "switching to slot [" << this->pl->cur_slot << "]" << std::endl;
+  }
+  
+  void
+  mc18_packet_handler::handle_p0d (packet_reader& reader)
+  {
+    // 
+    // 0x0D: Close Window
+    //
+    
+    logger& log = this->conn->get_server ().get_logger ();
+    log (LT_DEBUG) << "Closing window" << std::endl;
+    
+    unsigned char wid = reader.read_byte ();
+    if (wid == 0)
+      return; // inventory closed
+    
+    window *w = this->pl->get_window ();
+    if (w->get_id () != wid)
+      {
+        this->conn->disconnect ();
+        return;
+      }
+    
+    this->pl->close_window ();
+  }
+  
+  void
+  mc18_packet_handler::handle_p0e (packet_reader& reader)
+  {
+    // 
+    // 0x0E: Click Window
+    //
+    
+    unsigned char wid = reader.read_byte ();
+    short slot = reader.read_short ();
+    unsigned char btn = reader.read_byte ();
+    unsigned short act = reader.read_short ();
+    unsigned char mode = reader.read_byte ();
+    std::unique_ptr<slot_item> item { _read_slot (reader) };
+    
+    window *win = this->pl->get_window ();
+    if ((win && (win->get_id () != wid)) || (!win && (wid != 0)))
+      {
+        this->conn->disconnect ();
+        return;
+      }
+    
+    logger& log = this->conn->get_server ().get_logger ();
+    log (LT_DEBUG) << "click window: wid[" << (int)wid << "] mode[" << (int)mode << "] btn[" << btn << "] slot[" << slot << "] act[" << act << "]" << std::endl;
+    
+    switch (mode)
+      {
+      case 0:
+        
+      
+      default:
+        //this->conn->disconnect ();
+        return;
+      }
+  }
+  
+  void
+  mc18_packet_handler::handle_p10 (packet_reader& reader)
+  {
+    // 
+    // 0x10: Creative Inventory Action
+    //
+    
+    short slot = reader.read_short ();
+    std::unique_ptr<slot_item> item { _read_slot (reader) };
+    
+    logger& log = this->conn->get_server ().get_logger ();
+    
+    if (slot < 1 || slot > 44)
+      {
+        this->conn->disconnect ();
+        return;
+      }
+    
+    if (item->get_id () == EMPTY_SLOT_VALUE)
+      {
+        // clear item
+        this->pl->get_inv ().set (slot, nullptr);
+        log (LT_DEBUG) << "cleared slot [" << slot << "]" << std::endl;
+      }
+    else
+      {
+        log (LT_DEBUG) << "set slot [" << slot << "] to " << item->get_id () << std::endl;
+        this->pl->get_inv ().set (slot, item.release ());
+      }
   }
   
   
@@ -463,11 +624,21 @@ namespace hc {
     if (!this->conn)
       return;
     
-    logger& log = this->conn->get_server ().get_logger ();
-    
     int len = reader.read_varint ();
     int opc = reader.read_varint ();
-    //log (LT_DEBUG) << "got packet [" << len << " bytes] ::id(" << opc << ")" << std::endl;
+    
+    /*
+    logger& log = this->conn->get_server ().get_logger ();
+    switch (opc)
+      {
+      case 3: case 4: case 5: case 6:
+        break;
+      
+      default:
+        log (LT_DEBUG) << "got packet [" << len << " bytes] ::id(" << opc << ")" << std::endl;
+        break;
+      }
+    //*/
     
     static void (mc18_packet_handler:: *_handshake_table[]) (packet_reader&) = {
       &mc18_packet_handler::handle_h00, 
@@ -488,11 +659,11 @@ namespace hc {
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_p03,
       &mc18_packet_handler::handle_p04, &mc18_packet_handler::handle_p05,
       &mc18_packet_handler::handle_p06, &mc18_packet_handler::handle_p07,
+      &mc18_packet_handler::handle_p08, &mc18_packet_handler::handle_p09,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
-      &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
-      &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
-      &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
-      &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
+      &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_p0d,
+      &mc18_packet_handler::handle_p0e, &mc18_packet_handler::handle_xx,
+      &mc18_packet_handler::handle_p10, &mc18_packet_handler::handle_xx,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,
       &mc18_packet_handler::handle_xx, &mc18_packet_handler::handle_xx,

@@ -140,6 +140,9 @@ namespace hc {
     void set_sky_light (int x, int y, int z, unsigned char sl);
     unsigned char get_sky_light (int x, int y, int z);
     
+    void set_id_and_meta (int x, int y, int z, unsigned short id,
+      unsigned char meta);
+    
   //----------------------------------------------------------------------------
     
     

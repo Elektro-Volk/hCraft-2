@@ -27,6 +27,12 @@ namespace hc {
   // 
   
   
+  enum game_mode
+  {
+    GM_SURVIVAL = 0,
+    GM_CREATIVE = 1,
+  };
+  
   
   enum digging_state
   {

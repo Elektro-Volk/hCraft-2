@@ -71,6 +71,8 @@ namespace hc {
     
     void enqueue_sl_no_lock (world *w, int x, int y, int z);
     
+    void enqueue_sl_neighbours (world *w, int x, int y, int z);
+    
   public:
     /* 
      * Starts the specified amount of worker threads.

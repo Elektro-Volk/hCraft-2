@@ -26,7 +26,8 @@
 #include "system/logger.hpp"
 #include "world/world.hpp"
 #include "world/chunk.hpp"
-#include "slot/blocks.hpp"
+#include "world/blocks.hpp"
+#include "cmd/command.hpp"
 #include <chrono>
 #include <algorithm>
 
@@ -60,6 +61,9 @@ namespace hc {
     this->w = nullptr;
     this->spawned = false;
     this->gen_tok = 0;
+    this->openw = nullptr;
+    this->cur_slot = 0;
+    this->gm = GM_SURVIVAL;
   }
   
   player::~player ()
@@ -109,7 +113,7 @@ namespace hc {
   player::message (const std::string& msg)
   {
     auto builder = this->conn.get_protocol ()->get_builder ();
-    this->conn.send (builder->make_chat_message (msg));
+    this->conn.send (builder->make_chat_message ("§e" + msg));
   }
   
   
@@ -300,6 +304,42 @@ namespace hc {
   
   
   
+  /* 
+   * Respawns the player with a different game mode.
+   */
+  void
+  player::set_gm (game_mode gm)
+  {
+    this->gm = gm;
+    
+    // TODO: respawn
+  }
+  
+  
+  
+  /* 
+   * Opens the specified window (and shows it to the player).
+   */
+  void
+  player::open_window (window *w)
+  {
+    this->openw = w;
+    
+    // TODO: show window
+  }
+  
+  /* 
+   * Close currently open window.
+   */
+  void
+  player::close_window ()
+  {
+    delete this->openw;
+    this->openw = nullptr;
+  }
+  
+  
+  
 //------------------------------------------------------------------------------
   
   /* 
@@ -341,6 +381,34 @@ namespace hc {
   
   
   
+  void
+  player::handle_command (const std::string& msg)
+  {
+    std::string name, rest;
+    for (size_t i = 1; i < msg.length (); ++i)
+      {
+        if (msg[i] != ' ')
+          name.push_back (msg[i]);
+        else
+          {
+            while (i < msg.length () && msg[i] == ' ')
+              ++ i;
+            for (; i < msg.length (); ++i)
+              rest.push_back (msg[i]);
+            break;
+          }
+      }
+    
+    command *cmd = this->srv.find_command (name);
+    if (!cmd)
+      {
+        this->message () << "§cUnknown command§f: §7/" << name << endm;
+        return;
+      }
+    
+    cmd->execute (this, rest);
+  }
+  
   /* 
    * Invoked by the underlying packet handler when the player attempts to
    * send out a chat message.
@@ -350,6 +418,14 @@ namespace hc {
   {
     if (this->conn.is_disconnected () || !this->spawned)
       return;
+    if (msg.empty ())
+      return;
+    
+    if (msg[0] == '/')
+      {
+        this->handle_command (msg);
+        return;
+      }
     
     log (LT_CHAT) << this->get_username () << ": " << msg << std::endl;
     
@@ -379,7 +455,7 @@ namespace hc {
    * Invoked when the player attempts to destroy a block.
    */
   void
-  player::on_digging (int x, int y, int z, digging_state state, block_face face)
+  player::on_dig (int x, int y, int z, digging_state state, block_face face)
   {
     if (this->conn.is_disconnected () || !this->spawned)
       return;
@@ -403,6 +479,52 @@ namespace hc {
       
       default: ;
       }
+  }
+  
+  
+  
+  /* 
+   * Invoked when the player tries to place a block down.
+   */
+  void
+  player::on_place (int x, int y, int z, block_face face)
+  {
+    if (x == -1 && y == 4095 && z == -1)
+      {
+        // update held item status
+        // TODO
+        return;
+      }
+    
+    int nx = x, ny = y, nz = z;
+    switch (face)
+      {
+      case BFACE_X_NEG: -- nx; break;
+      case BFACE_X_POS: ++ nx; break;
+      case BFACE_Y_NEG: -- ny; break;
+      case BFACE_Y_POS: ++ ny; break;
+      case BFACE_Z_NEG: -- nz; break;
+      case BFACE_Z_POS: ++ nz; break;
+      
+      default:
+        this->conn.disconnect ();
+        return;
+      }
+    
+    if (ny < 0 || ny > 255)
+      { this->conn.disconnect (); return; }
+    else if (!_block_in_range (this->pos, block_pos (nx, ny, nz)))
+      {
+        // TODO: resend original block
+        return;
+      }
+    
+    slot_item *held_item = this->inv.get (36 + this->cur_slot);
+    if (!held_item)
+      return;
+    
+    this->w->set_id_and_meta (nx, ny, nz, held_item->get_id (),
+      held_item->get_damage ());
   }
   
   

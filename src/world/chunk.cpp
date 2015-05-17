@@ -17,7 +17,7 @@
  */
 
 #include "world/chunk.hpp"
-#include "slot/blocks.hpp"
+#include "world/blocks.hpp"
 #include <cstring>
 
 

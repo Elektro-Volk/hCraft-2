@@ -16,32 +16,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _hCraft2__SLOT__SLOT__H_
-#define _hCraft2__SLOT__SLOT__H_
+#ifndef _hCraft2__INV__INVENTORY__H_
+#define _hCraft2__INV__INVENTORY__H_
+
+#include "inv/window.hpp"
 
 
 namespace hc {
   
   /* 
-   * Represents a single window/inventory item.
+   * Represents player inventory.
    */
-  class slot_item
+  class inventory: public window
   {
-    unsigned short id;
-    int amount;
-    unsigned short damage;
-    
   public:
-    inline unsigned short get_id () const { return this->id; }
-    inline int get_amount () const { return this->amount; }
-    inline unsigned short get_damage () const { return this->damage; }
-    
-    inline void set_id (unsigned short id) { this->id = id; }
-    inline void set_amount (int amount) { this->amount = amount; }
-    inline void set_damage (unsigned short damage) { this->damage = damage; }
-    
-  public:
-    slot_item (unsigned short id, unsigned short damage = 0, int amount = 1);
+    inventory ();
   };
 }
 

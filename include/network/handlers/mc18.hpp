@@ -83,6 +83,11 @@ namespace hc {
     virtual void handle_p05 (packet_reader& reader); // player look
     virtual void handle_p06 (packet_reader& reader); // player pos & look
     virtual void handle_p07 (packet_reader& reader); // player digging
+    virtual void handle_p08 (packet_reader& reader); // player block placement
+    virtual void handle_p09 (packet_reader& reader); // held item change
+    virtual void handle_p0d (packet_reader& reader); // close window
+    virtual void handle_p0e (packet_reader& reader); // click window
+    virtual void handle_p10 (packet_reader& reader); // creative inventory action
     
   public:
     /* 

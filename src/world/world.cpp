@@ -302,6 +302,23 @@ namespace hc {
   }
   
   
+  void
+  world::set_id_and_meta (int x, int y, int z, unsigned short id,
+    unsigned char meta)
+  {
+    chunk *ch = this->get_chunk (x >> 4, z >> 4);
+    if (!ch)
+      {
+        if (id == 0)
+          return;
+        ch = this->load_chunk (x >> 4, z >> 4);
+      }
+    
+    ch->set_id_and_meta (x & 15, y, z & 15, id, meta);
+    this->srv.get_lighting_manager ().enqueue (this, x, y, z);
+  }
+  
+  
   
 //------------------------------------------------------------------------------
   

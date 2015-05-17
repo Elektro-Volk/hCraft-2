@@ -27,6 +27,7 @@
 #include "world/world_provider.hpp"
 #include "player/player.hpp"
 #include "os/fs.hpp"
+#include "cmd/command.hpp"
 #include <chrono>
 #include <cstring>
 #include <algorithm>
@@ -61,6 +62,7 @@ namespace hc {
     this->inits.emplace_back (&server::init_config, &server::fin_config);
     this->inits.emplace_back (&server::init_crypt, &server::fin_crypt);
     this->inits.emplace_back (&server::init_worlds, &server::fin_worlds);
+    this->inits.emplace_back (&server::init_cmds, &server::fin_cmds);
     this->inits.emplace_back (&server::init_workers, &server::fin_workers);
     this->inits.emplace_back (&server::init_listener, &server::fin_listener);
     this->inits.emplace_back (&server::init_scheduler, &server::fin_scheduler);
@@ -321,6 +323,22 @@ namespace hc {
   
   
   
+  /* 
+   * Finds and returns a command whose name matches the one specified from
+   * the server's list of registered commands.
+   */
+  command*
+  server::find_command (const std::string& name)
+  {
+    auto itr = this->cmds.find (name);
+    if (itr == this->cmds.end ())
+      return nullptr;
+    
+    return itr->second;
+  }
+  
+  
+  
 //------------------------------------------------------------------------------
   
   /* 
@@ -474,6 +492,33 @@ namespace hc {
     this->worlds.clear ();
     
     this->lman.stop ();
+  }
+  
+  
+  
+//------------------------------------------------------------------------------
+  /* 
+   * Loads and sets up server/player commands.
+   */
+  
+  void
+  server::init_cmds ()
+  {
+#define ADD_COMMAND(NAME)                   \
+  {                                         \
+    command *cmd = command::create (NAME);  \
+    this->cmds[cmd->name ()] = cmd;         \
+  }
+    
+    ADD_COMMAND("help")
+  }
+  
+  void
+  server::fin_cmds ()
+  {
+    for (auto p : this->cmds)
+      delete p.second;
+    this->cmds.clear ();
   }
   
   
