@@ -28,6 +28,7 @@
 #include "world/chunk.hpp"
 #include "world/blocks.hpp"
 #include "cmd/command.hpp"
+#include "entity/player.hpp"
 #include <chrono>
 #include <algorithm>
 
@@ -64,14 +65,18 @@ namespace hc {
     this->openw = nullptr;
     this->cur_slot = 0;
     this->gm = GM_SURVIVAL;
+    
+    this->pent = new player_entity (this, srv.next_entity_id ());
   }
   
   player::~player ()
   {
     if (this->w)
       {
+        this->pent->despawn ();
+        delete this->pent;
+        
         // abort all chunk generation requests
-        //this->w->get_async_gen ().stop (this->gen_tok);
         this->w->get_async_gen ().free_token (this->gen_tok);
         
         this->w->remove_player (this);
@@ -189,6 +194,8 @@ namespace hc {
         this->conn.send (
           builder->make_player_position_and_look (
             this->pos.x, this->pos.y, this->pos.z, this->pos.yaw, this->pos.pitch, 0));
+        
+        this->pent->spawn (this->w, this->pos);
       }
   }
   
@@ -199,7 +206,7 @@ namespace hc {
   void
   player::stream_chunks ()
   {
-#define VISIBILITY_RADIUS   3
+#define VISIBILITY_RADIUS   this->srv.get_config ().view_dist
     
     // TODO: generalize
     auto builder = dynamic_cast<mc18_packet_builder *> (
@@ -368,6 +375,7 @@ namespace hc {
       return;
     
     this->pos = pos;
+    this->pent->move (this->pos);
     
     // stream chunks if needed
     chunk_pos cp = pos;
@@ -524,7 +532,7 @@ namespace hc {
       return;
     
     this->w->set_id_and_meta (nx, ny, nz, held_item->get_id (),
-      held_item->get_damage ());
+      (unsigned char)held_item->get_damage ());
   }
   
   

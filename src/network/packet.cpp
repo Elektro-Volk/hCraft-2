@@ -20,6 +20,10 @@
 #include "util/binary.hpp"
 #include <cstring>
 
+#include <iostream> // DEBUG
+#include <iomanip>  // DEBUG
+#include <cctype>   // DEBUG
+
 
 namespace hc {
   
@@ -319,6 +323,47 @@ namespace hc {
     this->pos += len;
     if (this->pos > this->len)
       this->len = this->pos;
+  }
+  
+  
+  
+  /* 
+   * DEBUG
+   */
+  void
+  packet::print_hex ()
+  {
+    std::cout << std::hex;
+    
+    int lines = (this->len >> 4) + !!(this->len & 15);
+    for (int i = 0; i < lines; ++i)
+      {
+        std::cout << std::setfill ('0') << std::setw (8) << (i << 4) << " | ";
+        
+        int c = this->len - (i << 4);
+        if (c > 16)
+          c = 16;
+        
+        for (int j = 0; j < c; ++j)
+          {
+            std::cout << std::setfill ('0') << std::setw (2) << (int)this->arr[(i << 4) | j];
+            if (j != (c - 1))
+              std::cout << ' ';
+          }
+        for (int j = c; j < 16; ++j)
+          std::cout << "   ";
+          
+        std::cout << " | ";
+        for (int j = 0; j < c; ++j)
+          {
+            char cc = this->arr[(i << 4) | j];
+            std::cout << (std::isprint (cc) ? cc : '.');
+          }
+          
+        std::cout << std::endl;
+      }
+    
+    std::cout << std::dec;
   }
 }
 

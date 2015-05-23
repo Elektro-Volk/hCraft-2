@@ -43,6 +43,7 @@ namespace hc {
   class world;
   class chunk;
   class server;
+  class player_entity;
   
   
 //------------------------------------------------------------------------------
@@ -100,6 +101,7 @@ namespace hc {
     std::string name;
     std::mt19937 rnd;
     game_mode gm;
+    player_entity *pent;
     
     // keep-alive related:
     bool ka_expecting;  // whether we're expecting a response keep-alive packet.
@@ -131,6 +133,7 @@ namespace hc {
     inline const std::string& get_username () const { return this->name; }
     inline world* get_world () { return this->w; }
     inline entity_pos& position () { return this->pos; }
+    inline player_entity* get_entity () { return this->pent; }
     
     inline inventory& get_inv () { return this->inv; }
     inline window* get_window () { return this->openw; }

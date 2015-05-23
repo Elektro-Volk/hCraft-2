@@ -26,9 +26,11 @@
 #include "network/transformers/aes.hpp"
 #include "network/transformers/zlib_mc18.hpp"
 #include "util/json.hpp"
+#include "player/uuid_manager.hpp"
 #include "player/player.hpp"
 #include "world/world.hpp"
 #include "world/chunk.hpp"
+#include "system/authenticator.hpp"
 #include <sstream>
 #include <memory>
 #include <stdexcept>
@@ -54,14 +56,35 @@ namespace hc {
   
   
   void
-  mc18_packet_handler::login ()
+  mc18_packet_handler::uuid_get_success (const std::string& name, uuid_t uuid)
   {
     server& srv = this->conn->get_server ();
+    logger& log = srv.get_logger ();
+    
+    player *pl = new player (*this->conn, uuid, name);
+    try
+      {
+        srv.register_player (pl);
+      }
+    catch (const server_full_error&)
+      {
+        delete pl;
+        this->conn->send (
+          builder->make_login_disconnect ("Sorry, server full"), CONN_SEND_DISCONNECT);
+        return;
+      }
+    
+    this->conn->set_player (pl);
+    this->pl = pl;
+    log (LT_SYSTEM) << "Player `" << pl->get_username () << "' logging in from @"
+      << this->conn->get_ip () << " (UUID: " << pl->get_uuid ().str () << ")" << std::endl;
+    
+    this->pl->set_gm (GM_CREATIVE);
     
     this->conn->send (this->builder->make_login_success (
       pl->get_uuid ().str (), pl->get_username ()));
     this->conn->send (this->builder->make_join_game (
-      1, 1, 0, 0, 20, "default", true));
+      1, 1, 0, 0, srv.get_config ().max_players, "default", true));
     this->state = PS_PLAY;
     
     // ---
@@ -84,6 +107,28 @@ namespace hc {
     // ---
     
     this->pl->on_login ();
+  }
+  
+  void
+  mc18_packet_handler::uuid_get_fail (const std::string& name)
+  {
+    logger& log = this->conn->get_server ().get_logger ();
+    log (LT_WARNING) << "Could not get UUID of player '" << name << "'" << std::endl;
+    
+    this->disconnect ();
+  }
+  
+  void
+  mc18_packet_handler::login ()
+  {
+    server& srv = this->conn->get_server ();
+    
+    // fetch UUID
+    auto that = this;
+    std::string name = this->name;
+    srv.get_uuid_manager ().from_username (name,
+      [that, name] (uuid_t uuid) { that->uuid_get_success (name, uuid); },
+      [that, name] { that->uuid_get_fail (name); });
   }
   
   
@@ -223,33 +268,28 @@ namespace hc {
     //
     
     server& srv = this->conn->get_server ();
-    logger& log = srv.get_logger ();
     
     char name[256];
     if (!reader.read_string (name, sizeof name))
       { this->conn->disconnect (); return; }
     // TODO: check whether username is valid
     
-    player *pl = new player (*this->conn, uuid_t::random (), name);
+    /*{
+      // 
+      // DEBUG
+      // 
+      static int _t = 0;
+      static const char *_usernames[] = { "Ikenga", "BizarreCake", "laCour" };
+      std::strcpy (name, _usernames[_t++ % 3]);
+    }*/
     
-    try
+    this->name = name;
+    
+    if (!srv.get_config ().encryption)
       {
-        srv.register_player (pl);
-      }
-    catch (const server_full_error&)
-      {
-        delete pl;
-        this->conn->send (
-          builder->make_login_disconnect ("Sorry, server full"), CONN_SEND_DISCONNECT);
+        this->login ();
         return;
       }
-    
-    this->conn->set_player (pl);
-    this->pl = pl;
-    log (LT_SYSTEM) << "Player `" << pl->get_username () << "' logging in from @"
-      << this->conn->get_ip () << " (UUID: " << pl->get_uuid ().str () << ")" << std::endl;
-    
-    this->pl->set_gm (GM_CREATIVE);
     
     // initialize verification token
     std::mt19937 rnd;
@@ -259,16 +299,26 @@ namespace hc {
     for (int i = 0; i < 4; ++i)
       this->vtoken[i] = dis (rnd);
     
-    if (!srv.get_config ().encryption)
-      {
-        this->login ();
-        return;
-      }
-    
     // send encryption request
     auto pkey = srv.get_pub_key ();
     this->conn->send (
       this->builder->make_encryption_request ("", pkey, vtoken));
+  }
+  
+  
+  
+  void
+  mc18_packet_handler::auth_cb (bool succ)
+  {
+    if (succ)
+      this->login ();
+    else
+      {
+        logger& log = this->conn->get_server ().get_logger ();
+        log (LT_WARNING) << "Unauthenticated player '" << this->name
+          << "' attempted to connect" << std::endl;
+        this->conn->disconnect ();
+      }
   }
   
   void
@@ -354,9 +404,15 @@ namespace hc {
         break;
       }
     
-    // ---
-    
-    this->login ();
+    // authenticate
+    if (!srv.get_config ().online)
+      this->login ();
+    else
+      {
+        auto me = this;
+        srv.get_auth ().authenticate (this->name, ssec,
+          [me] (bool succ) { me->auth_cb (succ); });
+      }
   }
   
   

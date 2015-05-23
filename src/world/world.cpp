@@ -30,12 +30,14 @@
 namespace hc {
   
   world::world (const std::string& name, server& srv, world_generator *gen,
-    world_provider *prov)
+    world_provider *prov, int width, int depth)
     : srv (srv), log (srv.get_logger ()), async_gen (*this, srv.get_gen_seq ())
   {
     this->inf.name = name;
     this->inf.seed = std::chrono::duration_cast<std::chrono::nanoseconds> (
       std::chrono::high_resolution_clock::now ().time_since_epoch ()).count ();
+    this->inf.width = width;
+    this->inf.depth = depth;
     
     this->gen = gen;
     this->prov = prov;
@@ -48,6 +50,8 @@ namespace hc {
           this->prov->get_specifier ()->path_from_name (this->inf.name));
         this->prov->save_world_data (this->inf);
       }
+    
+    this->prepare_oob_chunk ();
   }
   
   // used by world::load_from ()
@@ -64,6 +68,8 @@ namespace hc {
         this->prov->open (
           this->prov->get_specifier ()->path_from_name (this->inf.name));
       }
+    
+    this->prepare_oob_chunk ();
   }
   
   world::~world ()
@@ -72,6 +78,7 @@ namespace hc {
     
     for (auto p : this->chunks)
       delete p.second;
+    delete this->edge_ch;
     
     delete this->gen;
     delete this->prov;
@@ -120,6 +127,16 @@ namespace hc {
     srv.get_logger () (LT_SYSTEM) << "Loaded world \"" << wd.name
       << "\" (format: " << fmt << ") from \"" << path << "\"" << std::endl;
     return new world (wd, srv, gen, prov);
+  }
+  
+  
+  
+  void
+  world::prepare_oob_chunk ()
+  {
+    this->edge_ch = new chunk (0, 0);
+    this->gen->generate_edge (this->edge_ch);
+    this->srv.get_lighting_manager ().light_chunk (this->edge_ch);
   }
   
   
@@ -189,6 +206,13 @@ namespace hc {
   chunk*
   world::get_chunk_no_lock (int x, int z)
   {
+    if (this->inf.width > -1)
+      if (x < 0 || x >= (this->inf.width >> 4))
+        return this->edge_ch;
+    if (this->inf.depth > -1)
+      if (z < 0 || z >= (this->inf.depth >> 4))
+        return this->edge_ch;
+    
     unsigned long long index =
       (unsigned int)x | ((unsigned long long)(unsigned int)z << 32);
     
@@ -212,6 +236,13 @@ namespace hc {
     std::lock_guard<std::mutex> guard (this->ch_mtx);
     unsigned long long index =
       (unsigned int)x | ((unsigned long long)(unsigned int)z << 32);
+    
+    if (this->inf.width > -1)
+      if (x < 0 || x >= (this->inf.width >> 4))
+        return this->edge_ch;
+    if (this->inf.depth > -1)
+      if (z < 0 || z >= (this->inf.depth >> 4))
+        return this->edge_ch;
     
     auto itr = this->chunks.find (index);
     if (itr != this->chunks.end ())
@@ -341,6 +372,17 @@ namespace hc {
     std::lock_guard<std::mutex> guard (this->pl_mtx);
     this->pls.erase (std::remove (this->pls.begin (), this->pls.end (), pl),
       this->pls.end ());
+  }
+  
+  /* 
+   * Calls the specified callback function for every player in the world.
+   */
+  void
+  world::all_players (std::function<void (player *)>&& cb)
+  {
+    std::lock_guard<std::mutex> guard (this->pl_mtx);
+    for (player *pl : this->pls)
+      cb (pl);
   }
   
   

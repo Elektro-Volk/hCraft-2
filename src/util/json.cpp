@@ -283,6 +283,42 @@ namespace hc {
     return obj.release ();
   }
   
+  static json::j_array*
+  _read_array (lexer_stream& strm)
+  {
+    int c;
+    _skip_white (strm);
+    
+    if (strm.get () != '[')
+      throw json_parse_error ("expected '[' at start of JSON array",
+        strm.line (), strm.column ());
+    
+    std::unique_ptr<json::j_array> arr { new json::j_array () };
+    
+    for (;;)
+      {
+        _skip_white (strm);
+        if (strm.peek () == ']')
+          {
+            strm.get ();
+            break;
+          }
+        
+        json::j_value *val = _read (strm);
+        arr->add (val);
+        
+        _skip_white (strm);
+        c = strm.peek ();
+        if (c == ',')
+          strm.get ();
+        else if (c != ']')
+          throw json_parse_error ("expected ',' or ']' after array element",
+            strm.line (), strm.column ());
+      }
+    
+    return arr.release ();
+  }
+  
   static json::j_string*
   _read_string (lexer_stream& strm)
   {
@@ -367,6 +403,7 @@ namespace hc {
     switch (c)
       {
       case '{': return _read_object (strm);
+      case '[': return _read_array (strm);
       case '"': return _read_string (strm);
       
       case 't':

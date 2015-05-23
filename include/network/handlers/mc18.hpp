@@ -20,6 +20,7 @@
 #define _hCraft2__NETWORK__HANDLERS__MC18__H_
 
 #include "network/packet_handler.hpp"
+#include "util/uuid.hpp"
 
 
 namespace hc {
@@ -49,6 +50,7 @@ namespace hc {
     
     // encryption stuff:
     unsigned char vtoken[4]; // verification token
+    std::string name;        // player name
   
   public:
     mc18_packet_handler ();
@@ -56,6 +58,11 @@ namespace hc {
     
   private:
     void login ();
+    
+    void uuid_get_success (const std::string& name, uuid_t uuid);
+    void uuid_get_fail (const std::string& name);
+    
+    void auth_cb (bool succ);
     
   private:
     void handle_xx (packet_reader& reader); // dummy handler

@@ -16,43 +16,36 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _hCraft2__UTIL__UUID__H_
-#define _hCraft2__UTIL__UUID__H_
+#ifndef _hCraft2__ENTITY__PLAYER__H_
+#define _hCraft2__ENTITY__PLAYER__H_
 
-#include <string>
+#include "entity/entity.hpp"
 
 
 namespace hc {
   
-  struct uuid_t
+  // forward decs:
+  class player;
+  
+  
+  /* 
+   * A special entity type that represents a player.
+   */
+  class player_entity: public entity
   {
-    unsigned char parts[16];
+    player *pl;
     
   public:
-    bool operator== (const uuid_t other) const;
-    bool operator!= (const uuid_t other) const;
+    player_entity (player *pl, int eid);
     
   public:
-    /* 
-     * Returns a human-readable representation of the UUID.
-     */
-    std::string str ();
+    virtual void spawn_to (player *pl) override;
     
-  public:
-    /* 
-     * Returns a random UUID.
-     */
-    static uuid_t generate_v4 ();
+    virtual void spawn (world *w, entity_pos pos) override;
     
-    /* 
-     * Generates and returns a UUIDv3 from the specified string.
-     */
-    static uuid_t generate_v3 (const std::string& str);
+    virtual void despawn () override;
     
-    /*
-     * Parses and returns a UUID from a 32 digit hex string.
-     */
-    static uuid_t parse_hex (const std::string& str);
+    virtual void build_metadata (entity_metadata& metadata) override;
   };
 }
 

@@ -26,6 +26,10 @@
 #include <chrono>
 #include <cstring>
 
+#ifndef WIN32
+# include <curl/curl.h>
+#endif
+
 // TEST:
 #include <random>
 #include <sstream>
@@ -86,6 +90,16 @@ _init_libevent ()
   return true;
 }
 
+static bool
+_init_curl ()
+{
+#ifndef WIN32
+  curl_global_init (CURL_GLOBAL_DEFAULT);
+#endif
+  
+  return true;
+}
+
 
 
 int
@@ -111,6 +125,12 @@ main (int argc, char *argv[])
       return -1;
     }
   
+  if (!_init_curl ())
+    {
+      log (hc::LT_FATAL) << "Could not initialize libcurl" << std::endl;
+      return -1;
+    }
+  
   hc::server srv {log};
   srv.start ();
   
@@ -125,6 +145,8 @@ main (int argc, char *argv[])
   
 #ifdef WIN32
   WSACleanup ();
+#else
+  curl_global_cleanup ();
 #endif
   
   return 0;

@@ -82,6 +82,17 @@ namespace hc {
       float pitch = 0.0, bool on_ground = false);
     entity_pos ();
   };
+  
+  
+  
+  struct vector3
+  {
+    double x, y, z;
+    
+  public:
+    vector3 ();
+    vector3 (double x, double y, double z);
+  };
 }
 
 

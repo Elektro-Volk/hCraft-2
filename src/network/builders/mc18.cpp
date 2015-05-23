@@ -21,10 +21,10 @@
 #include "util/binary.hpp"
 #include "world/chunk.hpp"
 #include "util/json.hpp"
+#include "entity/metadata.hpp"
 #include <sstream>
 #include <memory>
-
-#include <iostream> // DEBUG
+#include <cmath>
 
 
 namespace hc {
@@ -38,6 +38,13 @@ namespace hc {
     pack->use_reserved (vl);
     pack->put_bytes (a, vl);
     return pack;
+  }
+  
+  
+  static unsigned char
+  _to_angle (float v)
+  {
+    return (unsigned char)((std::fmod (v, 360.0)/360.0) * 256.0);
   }
   
   
@@ -297,6 +304,67 @@ namespace hc {
     packet *pack = new packet ();
     pack->put_varint (0x46); // opcode
     pack->put_varint (threshold);
+    
+    return _put_len (pack);
+  }
+  
+  
+  
+  packet*
+  mc18_packet_builder::make_player_list_add (uuid_t uuid,
+    const std::string& name, game_mode gm, int ping)
+  {
+    packet *pack = new packet ();
+    
+    pack->put_varint (0x38); // opcode
+    pack->put_varint (0);    // action (add player)
+    pack->put_varint (1);    // number of elements
+    for (int i = 0; i < 16; ++i)
+      pack->put_byte (uuid.parts[i]);
+    pack->put_string (name.c_str ());
+    pack->put_varint (0);    // number of properties
+    pack->put_varint ((gm == GM_CREATIVE) ? 1 : 0);
+    pack->put_varint (ping);
+    pack->put_bool (false);      // has display name
+    
+    return _put_len (pack);
+  }
+  
+  packet*
+  mc18_packet_builder::make_player_list_remove (uuid_t uuid,
+    const std::string& name)
+  {
+    packet *pack = new packet ();
+    
+    pack->put_varint (0x38); // opcode
+    pack->put_varint (4);    // action (remove player)
+    pack->put_varint (1);    // number of elements
+    for (int i = 0; i < 16; ++i)
+      pack->put_byte (uuid.parts[i]);
+    
+    return _put_len (pack);
+  }
+  
+  
+  
+  packet*
+  mc18_packet_builder::make_spawn_player (int eid, uuid_t uuid, double x,
+    double y, double z, float yaw, float pitch, short curr_item,
+    const entity_metadata& meta)
+  {
+    packet *pack = new packet ();
+    
+    pack->put_varint (0x0C); // opcode
+    pack->put_varint (eid);
+    for (int i = 0; i < 16; ++i)
+      pack->put_byte (uuid.parts[i]);
+    pack->put_int ((int)(x * 32.0));
+    pack->put_int ((int)(y * 32.0));
+    pack->put_int ((int)(z * 32.0));
+    pack->put_byte (_to_angle (yaw));
+    pack->put_byte (_to_angle (pitch));
+    pack->put_short (curr_item);
+    meta.encode (pack);
     
     return _put_len (pack);
   }

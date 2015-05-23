@@ -37,6 +37,13 @@ the Win64!); proceed by opening the generated .sln file, switch to Release mode
 within Visual Studio and build the project. The executable should be in
 build/Release/ afterwards.
 
+Debugging
+---------
+
+When using Valgrind to debug hCraft, make sure that online mode is turned off,
+or else you will have to deal with hundreds of false positives that are caused
+by OpenSSL (which is used by libcurl)!
+
 License
 -------
 

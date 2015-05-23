@@ -48,6 +48,8 @@ namespace hc {
     long long seed;       // used for world generation
     std::string gen_name; // name of world generator
     entity_pos spawn_pos; // spawn position
+    int width;            // width (X) in blocks, or -1 if infinite.
+    int depth;            // depth (Z) in blocks, or -1 if infinite.
   };
   
   
@@ -66,6 +68,7 @@ namespace hc {
     std::mutex ch_mtx;
     async_generator async_gen;
     world_provider *prov;
+    chunk *edge_ch;   // out of bounds chunk
     
     std::vector<player *> pls;
     std::mutex pl_mtx;
@@ -84,6 +87,8 @@ namespace hc {
     
     void set_chunk_neighbours (chunk *ch);
     
+    void prepare_oob_chunk ();
+    
   private:
     // used by world::load_from ()
     world (const world_data& wd, server& srv, world_generator *gen,
@@ -91,7 +96,7 @@ namespace hc {
     
   public:
     world (const std::string& name, server& srv, world_generator *gen,
-      world_provider *prov);
+      world_provider *prov, int width, int depth);
     ~world ();
   
   public:
@@ -161,6 +166,11 @@ namespace hc {
      * Removes the specified player from the world's player list.
      */
     void remove_player (player *pl);
+    
+    /* 
+     * Calls the specified callback function for every player in the world.
+     */
+    void all_players (std::function<void (player *)>&& cb);
     
   //----------------------------------------------------------------------------
     

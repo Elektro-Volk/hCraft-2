@@ -29,6 +29,7 @@ namespace hc {
   {
     cfg.motd = "A new hCraft server has been born!";
     cfg.max_players = 12;
+    cfg.online = true;
     
     cfg.port = 25565;
     cfg.encryption = true;
@@ -36,6 +37,7 @@ namespace hc {
     cfg.compress_level = 6;
     
     cfg.mainw = "Main";
+    cfg.view_dist = 3;
   }
   
   
@@ -54,6 +56,7 @@ namespace hc {
     fs << "\"general\": {\n";
     fs << "  \"motd\": \"A new hCraft server has been born!\",\n";
     fs << "  \"max-players\": 12,\n";
+    fs << "  \"online\": true,\n";
     fs << "  },\n";
     fs << "\n";
     fs << "  \"net\": {\n";
@@ -67,6 +70,7 @@ namespace hc {
     fs << "\n";
     fs << "  \"worlds\": {\n";
     fs << "    \"main-world\": \"Main\",\n";
+    fs << "    \"view-distance\": 3,\n";
     fs << "  }\n";
     fs << "}";
     
@@ -96,6 +100,12 @@ namespace hc {
       cfg.max_players = (int)obj->get ("max-players")->as_number ();
     else
       log (LT_WARNING) << "  config: `general.max-players' not found, using default." << std::endl;
+    
+    // general.online
+    if (obj->get ("online"))
+      cfg.online = obj->get ("online")->as_bool ();
+    else
+      log (LT_WARNING) << "  config: `general.online' not found, using default." << std::endl;
   }
   
   static void
@@ -159,6 +169,12 @@ namespace hc {
       cfg.mainw = obj->get ("main-world")->as_string ();
     else
       log (LT_WARNING) << "  config: `worlds.main-world' not found, using default." << std::endl;
+    
+    // worlds.view-distance
+    if (obj->get ("view-distance"))
+      cfg.view_dist = (int)obj->get ("view-distance")->as_number ();
+    else
+      log (LT_WARNING) << "  config: `worlds.view-distance' not found, using default." << std::endl;
   }
   
   static void
@@ -217,6 +233,12 @@ namespace hc {
       }
     
     delete root;
+    
+    if (this->cfg.online && !this->cfg.encryption)
+      {
+        log (LT_FATAL) << "Online mode cannot be turned on when encryption is off" << std::endl;
+        throw server_start_error ("encryption must be on for online mode to be on");
+      }
   }
   
   void

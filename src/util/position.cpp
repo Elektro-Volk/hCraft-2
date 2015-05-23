@@ -144,5 +144,21 @@ namespace hc {
     this->pitch = 0.0f;
     this->on_ground = false;
   }
+  
+  
+  
+//------------------------------------------------------------------------------
+  
+  vector3::vector3 ()
+  {
+    this->x = this->y = this->z = 0.0;
+  }
+  
+  vector3::vector3 (double x, double y, double z)
+  {
+    this->x = x;
+    this->y = y;
+    this->z = z;
+  }
 }
 

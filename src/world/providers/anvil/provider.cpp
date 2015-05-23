@@ -478,6 +478,21 @@ namespace hc {
       data->get ("SpawnX")->as_int (),
       data->get ("SpawnY")->as_int (),
       data->get ("SpawnZ")->as_int ());
+    
+    {
+      auto hcs = data->get ("hCraft");
+      if (hcs)
+        {
+          auto hcc = hcs->as_compound ();
+          wd.width = hcc->get ("Width")->as_int ();
+          wd.depth = hcc->get ("Depth")->as_int ();
+        }
+      else
+        {
+          wd.width = -1;
+          wd.depth = -1;
+        }
+    }
   }
   
   void
@@ -530,6 +545,11 @@ namespace hc {
     writer.put_int ((int)wd.spawn_pos.x, "SpawnX");
     writer.put_int ((int)wd.spawn_pos.y, "SpawnY");
     writer.put_int ((int)wd.spawn_pos.z, "SpawnZ");
+    
+    writer.start_compound ("hCraft");
+    writer.put_int (wd.width, "Width");
+    writer.put_int (wd.depth, "Depth");
+    writer.end_compound ();
     
     writer.end_compound (); // end of Data
     

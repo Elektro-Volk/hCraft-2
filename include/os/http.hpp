@@ -16,44 +16,32 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _hCraft2__UTIL__UUID__H_
-#define _hCraft2__UTIL__UUID__H_
+#ifndef _hCraft2__OS__HTTP__H_
+#define _hCraft2__OS__HTTP__H_
 
 #include <string>
+#include <stdexcept>
 
 
 namespace hc {
   
-  struct uuid_t
+  class http_error: public std::runtime_error
   {
-    unsigned char parts[16];
-    
   public:
-    bool operator== (const uuid_t other) const;
-    bool operator!= (const uuid_t other) const;
-    
-  public:
-    /* 
-     * Returns a human-readable representation of the UUID.
-     */
-    std::string str ();
-    
-  public:
-    /* 
-     * Returns a random UUID.
-     */
-    static uuid_t generate_v4 ();
-    
-    /* 
-     * Generates and returns a UUIDv3 from the specified string.
-     */
-    static uuid_t generate_v3 (const std::string& str);
-    
-    /*
-     * Parses and returns a UUID from a 32 digit hex string.
-     */
-    static uuid_t parse_hex (const std::string& str);
+    http_error (const std::string& str)
+      : std::runtime_error (str)
+      { }
   };
+  
+  
+  /* 
+   * Sends an HTTPS GET request to the specified server for the given resource.
+   * Returns the returned response's body as a string.
+   * 
+   * Throws `http_error' on failure.
+   */
+  std::string https_get (const char *server, const std::string& resource,
+    int timeout_sec);
 }
 
 #endif

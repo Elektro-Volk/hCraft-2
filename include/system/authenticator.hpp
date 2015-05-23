@@ -16,45 +16,37 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _hCraft2__UTIL__UUID__H_
-#define _hCraft2__UTIL__UUID__H_
+#ifndef _hCraft2__SYSTEM__AUTHENTICATOR__H_
+#define _hCraft2__SYSTEM__AUTHENTICATOR__H_
 
-#include <string>
+#include <functional>
 
 
 namespace hc {
   
-  struct uuid_t
+  // forward decs:
+  class server;
+  
+  /*
+   * Handles the process of verifying whether a connected player has
+   * authenticated with Mojang's servers.
+   */
+  class authenticator
   {
-    unsigned char parts[16];
+    server& srv;
     
   public:
-    bool operator== (const uuid_t other) const;
-    bool operator!= (const uuid_t other) const;
+    authenticator (server& srv);
     
   public:
-    /* 
-     * Returns a human-readable representation of the UUID.
-     */
-    std::string str ();
-    
-  public:
-    /* 
-     * Returns a random UUID.
-     */
-    static uuid_t generate_v4 ();
-    
-    /* 
-     * Generates and returns a UUIDv3 from the specified string.
-     */
-    static uuid_t generate_v3 (const std::string& str);
-    
     /*
-     * Parses and returns a UUID from a 32 digit hex string.
+     * Validates the authenticity of the specified player's connection and
+     * returns the result to the specified callback when done.
      */
-    static uuid_t parse_hex (const std::string& str);
+    void authenticate (const std::string& name, const unsigned char *ssec,
+      std::function<void (bool)>&& cb);
   };
-}
+} 
 
 #endif
 

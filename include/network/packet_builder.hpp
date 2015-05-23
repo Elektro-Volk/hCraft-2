@@ -19,13 +19,22 @@
 #ifndef _hCraft2__NETWORK__PACKET_BUILDER__H_
 #define _hCraft2__NETWORK__PACKET_BUILDER__H_
 
+#include "util/uuid.hpp"
+#include "util/common.hpp"
 #include <string>
+
+#ifdef WIN32
+# ifdef uuid_t
+#   undef uuid_t
+# endif
+#endif
 
 
 namespace hc {
   
   // forward decs:
   class packet;
+  class entity_metadata;
   
   /* 
    * Base class for packet builders.
@@ -44,6 +53,16 @@ namespace hc {
     virtual packet* make_disconnect (const std::string& msg) = 0;
     
     virtual packet* make_chat_message (const std::string& msg) = 0;
+    
+    virtual packet* make_player_list_add (uuid_t uuid, const std::string& name,
+      game_mode gm, int ping) = 0;
+    
+    virtual packet* make_player_list_remove (uuid_t uuid,
+      const std::string& name) = 0;
+    
+    virtual packet* make_spawn_player (int eid, uuid_t uuid, double x,
+      double y, double z, float yaw, float pitch, short curr_item,
+      const entity_metadata& meta) = 0;
   };
 }
 

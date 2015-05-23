@@ -79,13 +79,13 @@ namespace hc {
           {
             // handle escape sequence
             c = this->ss->get ();
+            if (c == _EOF)
+              throw command_parse_error ("expected escape sequence after '\\'");
+            
             switch (c)
               {
               case '\\': arg->val.push_back ('\\'); break;
               case '"': arg->val.push_back ('"'); break;
-              
-              case _EOF:
-                throw command_parse_error ("expected escape sequence after '\\'");
               
               default:
                 throw command_parse_error ("invalid escape sequence in string");

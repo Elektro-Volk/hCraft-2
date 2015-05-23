@@ -77,6 +77,16 @@ namespace hc {
     virtual packet* make_disconnect (const std::string& msg) override;
     
     virtual packet* make_set_compression (int threshold);
+    
+    virtual packet* make_player_list_add (uuid_t uuid, const std::string& name,
+      game_mode gm, int ping) override;
+    
+    virtual packet* make_player_list_remove (uuid_t uuid,
+      const std::string& name) override;
+    
+    virtual packet* make_spawn_player (int eid, uuid_t uuid, double x,
+      double y, double z, float yaw, float pitch, short curr_item,
+      const entity_metadata& meta) override;
   };
 }
 

@@ -28,6 +28,8 @@
 #include "player/player.hpp"
 #include "os/fs.hpp"
 #include "cmd/command.hpp"
+#include "player/uuid_manager.hpp"
+#include "system/authenticator.hpp"
 #include <chrono>
 #include <cstring>
 #include <algorithm>
@@ -324,6 +326,18 @@ namespace hc {
   
   
   /* 
+   * Generates and returns a unique entity ID.
+   */
+  int
+  server::next_entity_id ()
+  {
+    std::lock_guard<std::mutex> guard (this->ent_mtx);
+    return this->next_ent_id++;
+  }
+  
+  
+  
+  /* 
    * Finds and returns a command whose name matches the one specified from
    * the server's list of registered commands.
    */
@@ -386,12 +400,18 @@ namespace hc {
     this->tpool = new thread_pool ();
     this->tpool->init (4);
     
+    this->uman = new uuid_manager (*this);
+    
     this->gen_seq = this->tpool->create_seq ();
+    
+    this->next_ent_id = 0;
   }
   
   void
   server::last_fin ()
   {
+    delete this->uman;
+    
     this->tpool->release_seq (this->gen_seq,
       [] (void *ctx)
         {
@@ -416,12 +436,24 @@ namespace hc {
     // generate 1024-bit RSA key pair
     CryptoPP::AutoSeededRandomPool rnd;
     this->rsa_p.GenerateRandomWithKeySize (rnd, 1024);
+    
+    if (this->cfg.online)
+      {
+        this->uman->set_online ();
+        
+        this->auth = new authenticator (*this);
+      }
+    else
+      {
+        log (LT_WARNING) << "Server not running in online mode" << std::endl;
+        this->auth = nullptr;
+      }
   }
   
   void
   server::fin_crypt ()
   {
-    
+    delete this->auth;
   }
   
   
@@ -477,7 +509,7 @@ namespace hc {
         
         this->mainw = new world (this->cfg.mainw, *this,
           world_generator::create ("flatgrass", ""),
-          world_provider::create ("anvil"));
+          world_provider::create ("anvil"), 32, 32);
         this->worlds.push_back (this->mainw);
       }
   }
@@ -680,7 +712,9 @@ namespace hc {
   void
   server::last_init ()
   {
-    
+    this->uman->from_username ("BizarreCake",
+      [] (uuid_t uuid) { },
+      [] { });
   }
   
   void

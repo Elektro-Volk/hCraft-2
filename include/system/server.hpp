@@ -46,7 +46,9 @@ namespace hc {
   class thread;
   class world;
   class lighting_manager;
+  class uuid_manager;
   class command;
+  class authenticator;
   
   
   /* 
@@ -104,6 +106,7 @@ namespace hc {
     {
       std::string motd;
       int max_players;
+      bool online;
       
       int port;
       bool encryption;
@@ -111,6 +114,7 @@ namespace hc {
       int compress_level;
       
       std::string mainw;
+      int view_dist;
     };
   
   private:
@@ -132,8 +136,13 @@ namespace hc {
     std::vector<player *> players;
     std::recursive_mutex conn_mtx;
     
+    int next_ent_id;
+    std::mutex ent_mtx;
+    
     scheduler sched;
     thread_pool *tpool;
+    uuid_manager *uman;
+    authenticator *auth;
     
     std::vector<world *> worlds;
     world *mainw;
@@ -156,6 +165,8 @@ namespace hc {
     inline world* get_main_world () { return this->mainw; }
     inline thread_pool::seq_class* get_gen_seq () { return this->gen_seq; }
     inline lighting_manager& get_lighting_manager () { return this->lman; }
+    inline uuid_manager& get_uuid_manager () { return *this->uman; }
+    inline authenticator& get_auth () { return *this->auth; }
     inline int get_player_count () const { return (int)this->players.size (); }
     
     inline CryptoPP::RSA::PublicKey get_pub_key ()
@@ -220,6 +231,7 @@ namespace hc {
     void clean_gray ();
     
     
+    
     /*
      * Inserts the specified player to the server's player list.
      * 
@@ -238,6 +250,12 @@ namespace hc {
      */
     void all_players (std::function<void (player *)>&& cb);
     
+    
+    
+    /* 
+     * Generates and returns a unique entity ID.
+     */
+    int next_entity_id ();
     
     
     /* 

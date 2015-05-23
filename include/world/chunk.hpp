@@ -21,9 +21,15 @@
 
 #include "util/common.hpp"
 #include "util/position.hpp"
+#include <mutex>
+#include <vector>
 
 
 namespace hc {
+  
+  // forward decs:
+  class entity;
+  
   
   /* 
    * A 16x16x16 chunk of blocks.
@@ -53,6 +59,9 @@ namespace hc {
     
     // neighbours
     chunk *neighbours[4];
+    
+    std::vector<entity *> ents;
+    std::mutex ent_mtx;
     
   public:
     inline chunk_pos get_pos () { return this->pos; }
@@ -93,6 +102,29 @@ namespace hc {
     unsigned char get_block_light (int x, int y, int z);
     
     void set_id_and_meta (int x, int y, int z, unsigned short id, unsigned char meta);
+    
+  public:
+    /* 
+     * Entity management:
+     */
+    //--------------------------------------------------------------------------
+    
+    /* 
+     * Inserts the specified entity into the chunk's entity list.
+     */
+    void register_entity (entity *ent);
+    
+    /* 
+     * Removes the specified entity from the chunk's entity list.
+     */
+    void deregister_entity (entity *ent);
+    
+    /* 
+     * Calls the specified callback function for every entity in the chunk.
+     */
+    void all_entities (std::function<void (entity *)>&& cb);
+    
+    //--------------------------------------------------------------------------
   };
 }
 

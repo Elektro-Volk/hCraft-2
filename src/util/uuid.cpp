@@ -21,6 +21,9 @@
 #include <chrono>
 #include <mutex>
 
+#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
+#include <cryptopp/md5.h>
+
 
 namespace hc {
   
@@ -71,7 +74,7 @@ namespace hc {
    * Returns a random UUID.
    */
   uuid_t
-  uuid_t::random ()
+  uuid_t::generate_v4 ()
   {
     static bool _init = false;
     static std::mt19937 _rnd;
@@ -91,6 +94,61 @@ namespace hc {
     uuid_t uuid;
     for (int i = 0; i < 16; ++i)
       uuid.parts[i] = _dis (_rnd);
+    
+    // make it look like a version 4 UUID.
+    uuid.parts[6] = 0x40 | (uuid.parts[6] & 15);
+    uuid.parts[8] = 0xB0 | (uuid.parts[8] & 15);
+    
+    return uuid;
+  }
+  
+  /* 
+   * Generates and returns a UUIDv3 from the specified string.
+   */
+  uuid_t
+  uuid_t::generate_v3 (const std::string& str)
+  {
+    CryptoPP::Weak1::MD5 hash;
+    unsigned char digest[16];
+    hash.CalculateDigest ((unsigned char *)digest,
+      (const unsigned char *)str.c_str (), str.length ());
+    
+    uuid_t uuid;
+    for (int i = 0; i < 16; ++i)
+      uuid.parts[i] = digest[i];
+    
+    // make it look like a version 3 UUID.
+    uuid.parts[6] = 0x30 | (uuid.parts[6] & 15);
+    uuid.parts[8] = 0xB0 | (uuid.parts[8] & 15);
+    
+    return uuid;
+  }
+  
+  
+  
+  static char
+  _hex_to_dec (char c)
+  {
+    if (c >= 'a' && c <= 'z')
+      return 10 + c - 'a';
+    if (c >= 'A' && c <= 'Z')
+      return 10 + c - 'A';
+    return c - '0';
+  }
+  
+  /*
+   * Parses and returns a UUID from a 32 digit hex string.
+   */
+  uuid_t
+  uuid_t::parse_hex (const std::string& str)
+  {
+    uuid_t uuid;
+    for (int i = 0; i < 16; ++i)
+      {
+        uuid.parts[i] = (_hex_to_dec (str[i*2 + 0]) << 4)
+          | _hex_to_dec (str[i*2 + 1]);
+      }
+    
     return uuid;
   }
 }

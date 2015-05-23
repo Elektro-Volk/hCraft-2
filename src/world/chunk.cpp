@@ -19,6 +19,7 @@
 #include "world/chunk.hpp"
 #include "world/blocks.hpp"
 #include <cstring>
+#include <algorithm>
 
 
 namespace hc {
@@ -227,6 +228,42 @@ namespace hc {
       }
     else if (this->hmap[hind] == y + 1)
       this->recalc_height_at (x, z, y - 1);
+  }
+  
+  
+  
+//------------------------------------------------------------------------------
+  
+  /* 
+   * Inserts the specified entity into the chunk's entity list.
+   */
+  void
+  chunk::register_entity (entity *ent)
+  {
+    std::lock_guard<std::mutex> guard (this->ent_mtx);
+    this->ents.push_back (ent);
+  }
+  
+  /* 
+   * Removes the specified entity from the chunk's entity list.
+   */
+  void
+  chunk::deregister_entity (entity *ent)
+  {
+    std::lock_guard<std::mutex> guard (this->ent_mtx);
+    this->ents.erase (std::remove (this->ents.begin (), this->ents.end (), ent),
+      this->ents.end ());
+  }
+  
+  /* 
+   * Calls the specified callback function for every entity in the chunk.
+   */
+  void
+  chunk::all_entities (std::function<void (entity *)>&& cb)
+  {
+    std::lock_guard<std::mutex> guard (this->ent_mtx);
+    for (entity *ent : this->ents)
+      cb (ent);
   }
 }
 

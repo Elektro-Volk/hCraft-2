@@ -105,6 +105,11 @@ namespace hc {
      */
     void use_reserved (int count);
     
+    /* 
+     * DEBUG
+     */
+    void print_hex ();
+    
   public:
     /* 
      * `put' methods:
